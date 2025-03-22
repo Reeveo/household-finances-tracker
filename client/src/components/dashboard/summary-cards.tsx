@@ -127,7 +127,7 @@ export function SummaryCards() {
         percentage: 85,
         label: "Of monthly target"
       }
-    },
+    } as const,
     { 
       title: "Total Expenses", 
       amount: "£2,840.00", 
@@ -137,7 +137,7 @@ export function SummaryCards() {
       actionText: "Review spending",
       alert: {
         message: "Your expenses are higher than last month. Consider reviewing your spending habits.",
-        type: "warning"
+        type: "warning" as const
       }
     },
     { 
@@ -163,7 +163,7 @@ export function SummaryCards() {
       actionText: "View breakdown",
       alert: {
         message: "Your net worth is growing steadily. Keep up the good work!",
-        type: "info"
+        type: "info" as const
       }
     }
   ];
