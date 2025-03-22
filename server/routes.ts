@@ -18,19 +18,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes
   setupAuth(app);
 
-  // Need to handle authentication
+  // Authentication and authorization middleware
   function requireAuth(req: any, res: any, next: any) {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Authentication required" });
     }
     next();
   }
+  
+  // Helper function to check if user has access to a specific user's data
+  async function hasAccessToUserData(requestingUserId: number, targetUserId: number): Promise<{hasAccess: boolean, accessLevel?: string}> {
+    // If it's the user's own data, they have full access
+    if (requestingUserId === targetUserId) {
+      return { hasAccess: true, accessLevel: "edit" };
+    }
+    
+    // Check if there's a shared access between the two users
+    const sharedAccess = await storage.getSharedAccessByOwnerAndPartner(targetUserId, requestingUserId);
+    
+    if (sharedAccess && sharedAccess.status === "accepted") {
+      return { hasAccess: true, accessLevel: sharedAccess.accessLevel };
+    }
+    
+    return { hasAccess: false };
+  }
 
   // Income routes
   app.get("/api/incomes", requireAuth, async (req, res) => {
-    const userId = req.user!.id;
-    const incomes = await storage.getIncomes(userId);
-    res.json(incomes);
+    try {
+      const userId = req.user!.id;
+      const targetUserId = parseInt(req.query.userId as string) || userId;
+      
+      // If requesting someone else's data, check shared access
+      if (targetUserId !== userId) {
+        const access = await hasAccessToUserData(userId, targetUserId);
+        if (!access.hasAccess) {
+          return res.status(403).json({ message: "Not authorized to view this user's data" });
+        }
+      }
+      
+      const incomes = await storage.getIncomes(targetUserId);
+      res.json(incomes);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
   });
 
   app.post("/api/incomes", requireAuth, async (req, res) => {
@@ -59,10 +90,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Income not found" });
       }
       
-      if (existingIncome.userId !== userId) {
+      // If user owns the income, they can update it
+      if (existingIncome.userId === userId) {
+        const updatedIncome = await storage.updateIncome(incomeId, req.body);
+        return res.json(updatedIncome);
+      }
+      
+      // Check if user has edit access to this income via shared access
+      const access = await hasAccessToUserData(userId, existingIncome.userId);
+      if (!access.hasAccess) {
         return res.status(403).json({ message: "Not authorized" });
       }
-
+      
+      if (access.accessLevel !== "edit") {
+        return res.status(403).json({ message: "You only have view access to this data" });
+      }
+      
       const updatedIncome = await storage.updateIncome(incomeId, req.body);
       res.json(updatedIncome);
     } catch (error) {
@@ -93,9 +136,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Expense routes
   app.get("/api/expenses", requireAuth, async (req, res) => {
-    const userId = req.user!.id;
-    const expenses = await storage.getExpenses(userId);
-    res.json(expenses);
+    try {
+      const userId = req.user!.id;
+      const targetUserId = parseInt(req.query.userId as string) || userId;
+      
+      // If requesting someone else's data, check shared access
+      if (targetUserId !== userId) {
+        const access = await hasAccessToUserData(userId, targetUserId);
+        if (!access.hasAccess) {
+          return res.status(403).json({ message: "Not authorized to view this user's data" });
+        }
+      }
+      
+      const expenses = await storage.getExpenses(targetUserId);
+      res.json(expenses);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
   });
 
   app.post("/api/expenses", requireAuth, async (req, res) => {
@@ -352,6 +409,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       await storage.deleteInvestment(investmentId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Shared Access routes
+  app.get("/api/shared-access", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const sharedAccesses = await storage.getSharedAccesses(userId);
+      res.json(sharedAccesses);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/shared-access", requireAuth, async (req, res) => {
+    try {
+      const ownerId = req.user!.id;
+      
+      // Check if partner exists
+      const partnerEmail = req.body.partnerEmail;
+      const partner = await storage.getUserByEmail(partnerEmail);
+      if (!partner) {
+        return res.status(404).json({ message: "User with this email not found" });
+      }
+      
+      // Check if there's already a shared access between these users
+      const existingAccess = await storage.getSharedAccessByOwnerAndPartner(ownerId, partner.id);
+      if (existingAccess) {
+        return res.status(400).json({ message: "Shared access already exists with this user" });
+      }
+      
+      // Create shared access
+      const accessData = {
+        ownerId,
+        partnerId: partner.id,
+        accessLevel: req.body.accessLevel || "view" // Default to view-only if not specified
+      };
+      
+      const validatedData = insertSharedAccessSchema.parse(accessData);
+      const sharedAccess = await storage.createSharedAccess(validatedData);
+      
+      res.status(201).json(sharedAccess);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  });
+
+  app.put("/api/shared-access/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const accessId = parseInt(req.params.id, 10);
+      
+      const existingAccess = await storage.getSharedAccessById(accessId);
+      if (!existingAccess) {
+        return res.status(404).json({ message: "Shared access not found" });
+      }
+      
+      // Only partner can accept/reject, only owner can modify access level
+      if (req.body.status && existingAccess.partnerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to change status" });
+      }
+      
+      if (req.body.accessLevel && existingAccess.ownerId !== userId) {
+        return res.status(403).json({ message: "Not authorized to change access level" });
+      }
+      
+      // Update status if provided
+      let updatedAccess;
+      if (req.body.status) {
+        updatedAccess = await storage.updateSharedAccessStatus(
+          accessId,
+          req.body.status,
+          req.body.status === "accepted" ? new Date() : undefined
+        );
+      } else {
+        // Update other fields (accessLevel)
+        updatedAccess = await storage.updateSharedAccessStatus(
+          accessId,
+          existingAccess.status
+        );
+      }
+      
+      res.json(updatedAccess);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/shared-access/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const accessId = parseInt(req.params.id, 10);
+      
+      const existingAccess = await storage.getSharedAccessById(accessId);
+      if (!existingAccess) {
+        return res.status(404).json({ message: "Shared access not found" });
+      }
+      
+      // Either owner or partner can remove access
+      if (existingAccess.ownerId !== userId && existingAccess.partnerId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      await storage.deleteSharedAccess(accessId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Invitation routes
+  app.get("/api/invitations", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const invitations = await storage.getInvitations(userId);
+      res.json(invitations);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/invitations", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Generate a unique token
+      const token = crypto.randomBytes(32).toString('hex');
+      
+      // Set expiration date (default: 7 days)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      
+      const invitationData = {
+        ...req.body,
+        userId,
+        token,
+        expiresAt
+      };
+      
+      const validatedData = insertInvitationSchema.parse(invitationData);
+      const invitation = await storage.createInvitation(validatedData);
+      
+      res.status(201).json(invitation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  });
+
+  app.get("/api/invitations/:token", async (req, res) => {
+    try {
+      const token = req.params.token;
+      const invitation = await storage.getInvitationByToken(token);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+      
+      // Check if expired
+      if (invitation.expiresAt < new Date()) {
+        return res.status(410).json({ message: "Invitation has expired" });
+      }
+      
+      // Check if already used
+      if (invitation.usedAt) {
+        return res.status(410).json({ message: "Invitation has already been used" });
+      }
+      
+      res.json(invitation);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/invitations/:token/accept", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const token = req.params.token;
+      
+      const invitation = await storage.getInvitationByToken(token);
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+      
+      // Check if expired
+      if (invitation.expiresAt < new Date()) {
+        return res.status(410).json({ message: "Invitation has expired" });
+      }
+      
+      // Check if already used
+      if (invitation.usedAt) {
+        return res.status(410).json({ message: "Invitation has already been used" });
+      }
+      
+      // Create shared access
+      const accessData = {
+        ownerId: invitation.userId,
+        partnerId: userId,
+        accessLevel: invitation.accessLevel
+      };
+      
+      const sharedAccess = await storage.createSharedAccess(accessData);
+      
+      // Mark invitation as used
+      await storage.useInvitation(invitation.id);
+      
+      res.status(201).json(sharedAccess);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/invitations/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const invitationId = parseInt(req.params.id, 10);
+      
+      const invitations = await storage.getInvitations(userId);
+      const invitation = invitations.find(inv => inv.id === invitationId);
+      
+      if (!invitation) {
+        return res.status(404).json({ message: "Invitation not found" });
+      }
+      
+      await storage.deleteInvitation(invitationId);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Server error" });
