@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/utils/financial-calculations";
 
 // Sample data
 const transactions = [
@@ -81,7 +82,7 @@ export function RecentTransactions() {
                     </Badge>
                   </td>
                   <td className={`p-2 text-sm font-medium ${transaction.amount >= 0 ? 'text-success' : 'text-destructive'}`}>
-                    {transaction.amount >= 0 ? '+' : ''}{transaction.amount.toFixed(2)}
+                    {transaction.amount >= 0 ? '+' : ''}{formatCurrency(Math.abs(transaction.amount))}
                   </td>
                 </tr>
               ))}
