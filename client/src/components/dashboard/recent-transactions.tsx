@@ -112,7 +112,12 @@ const transactions = [
 ];
 
 // Map categories to badge colors and icons
-const categoryConfig = {
+const categoryConfig: Record<string, {
+  bg: string;
+  text: string;
+  border: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+}> = {
   Essentials: { 
     bg: 'bg-blue-100', 
     text: 'text-blue-800', 

@@ -69,7 +69,11 @@ export function NetWorthChart() {
     : netWorthData.filter(item => !item.isProjected);
     
   // Custom tooltip for better visualization
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip: React.FC<{
+    active?: boolean;
+    payload?: Array<any>;
+    label?: string;
+  }> = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const isProjected = data.isProjected;

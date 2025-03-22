@@ -18,7 +18,16 @@ import { Button } from "@/components/ui/button";
 import { PieChart, Pie } from "recharts";
 
 // Enhanced sample data with additional analytics
-const monthlySpendingData = [
+type MonthlySpendingDataItem = {
+  month: string;
+  Essentials: number;
+  Lifestyle: number;
+  Savings: number;
+  Total: number;
+  [key: string]: string | number; // Allow indexing with string keys
+};
+
+const monthlySpendingData: MonthlySpendingDataItem[] = [
   { month: 'Jan', Essentials: 1250, Lifestyle: 850, Savings: 400, Total: 2500 },
   { month: 'Feb', Essentials: 1180, Lifestyle: 780, Savings: 450, Total: 2410 },
   { month: 'Mar', Essentials: 1320, Lifestyle: 920, Savings: 400, Total: 2640 },
@@ -28,7 +37,13 @@ const monthlySpendingData = [
 ];
 
 // Subcategory breakdown for current month
-const subcategoryData = [
+type SubcategoryDataItem = {
+  name: string;
+  value: number;
+  category: string;
+};
+
+const subcategoryData: SubcategoryDataItem[] = [
   { name: "Housing", value: 850, category: "Essentials" },
   { name: "Utilities", value: 220, category: "Essentials" },
   { name: "Groceries", value: 350, category: "Essentials" },
@@ -41,14 +56,14 @@ const subcategoryData = [
 ];
 
 // Category colors with consistent mapping
-const CATEGORY_COLORS = {
+const CATEGORY_COLORS: Record<string, string> = {
   Essentials: "#3b82f6", // Blue
   Lifestyle: "#22c55e", // Green
   Savings: "#8b5cf6",   // Purple
 };
 
 // Generate subcategory colors based on main category color
-const SUBCATEGORY_COLORS = {
+const SUBCATEGORY_COLORS: Record<string, string> = {
   Housing: "#4b91f7",
   Utilities: "#2a75f5",
   Groceries: "#1a65e5",
@@ -98,13 +113,17 @@ export function MonthlySpendingChart() {
   const currentMonthSubcategories = subcategoryData;
   
   // Custom tooltip component for better visualization
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip: React.FC<{
+    active?: boolean;
+    payload?: Array<any>;
+    label?: string;
+  }> = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border border-border p-3 rounded-md shadow-md">
           <p className="font-semibold">{label}</p>
           <div className="space-y-1.5 mt-1.5">
-            {payload.map((entry) => (
+            {payload.map((entry: any) => (
               <div key={entry.name} className="flex items-center">
                 <div 
                   className="w-3 h-3 rounded-full mr-2"
@@ -118,7 +137,7 @@ export function MonthlySpendingChart() {
             {payload.length > 1 && (
               <div className="border-t border-border mt-1.5 pt-1.5">
                 <div className="text-sm font-semibold">
-                  Total: £{payload.reduce((sum, entry) => sum + entry.value, 0)}
+                  Total: £{payload.reduce((sum: number, entry: any) => sum + entry.value, 0)}
                 </div>
               </div>
             )}
