@@ -49,6 +49,11 @@ export function Sidebar({ className }: SidebarProps) {
       title: "Calculators",
       items: [
         {
+          title: "Salary Calculator",
+          icon: <PoundSterling className="w-5 h-5 mr-3" />,
+          href: "/salary-calculator",
+        },
+        {
           title: "Mortgage Calculator",
           icon: <Home className="w-5 h-5 mr-3" />,
           href: "/mortgage-calculator",
@@ -134,17 +139,16 @@ export function Sidebar({ className }: SidebarProps) {
                           {item.title}
                         </button>
                       ) : (
-                        <Link href={item.href}>
-                          <a
-                            className={cn(
-                              "flex items-center px-4 py-2 text-primary-foreground hover:bg-white/10 rounded-md",
-                              location === item.href && "bg-white/10"
-                            )}
-                            onClick={() => setMobileMenuOpen(false)}
-                          >
-                            {item.icon}
-                            {item.title}
-                          </a>
+                        <Link 
+                          href={item.href}
+                          className={cn(
+                            "flex items-center px-4 py-2 text-primary-foreground hover:bg-white/10 rounded-md",
+                            location === item.href && "bg-white/10"
+                          )}
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          {item.icon}
+                          {item.title}
                         </Link>
                       )}
                     </li>

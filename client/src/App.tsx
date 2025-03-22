@@ -12,6 +12,7 @@ import SavingsInvestmentsPage from "@/pages/savings-investments-page";
 import MortgageCalculatorPage from "@/pages/mortgage-calculator-page";
 import MortgageOverpaymentPage from "@/pages/mortgage-overpayment-page";
 import PensionCalculatorPage from "@/pages/pension-calculator-page";
+import SalaryCalculatorPage from "@/pages/salary-calculator-page";
 import AuthPage from "@/pages/auth-page";
 
 function Router() {
@@ -20,6 +21,7 @@ function Router() {
       <ProtectedRoute path="/" component={DashboardPage} />
       <ProtectedRoute path="/income-expenses" component={IncomeExpensePage} />
       <ProtectedRoute path="/savings-investments" component={SavingsInvestmentsPage} />
+      <ProtectedRoute path="/salary-calculator" component={SalaryCalculatorPage} />
       <ProtectedRoute path="/mortgage-calculator" component={MortgageCalculatorPage} />
       <ProtectedRoute path="/mortgage-overpayment" component={MortgageOverpaymentPage} />
       <ProtectedRoute path="/pension-calculator" component={PensionCalculatorPage} />
