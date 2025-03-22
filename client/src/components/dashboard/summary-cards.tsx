@@ -1,5 +1,9 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { TrendingUp, TrendingDown, Info, AlertCircle, ArrowRight } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 type SummaryCardProps = {
   title: string;
@@ -8,14 +12,53 @@ type SummaryCardProps = {
     value: string;
     isPositive: boolean;
   };
+  tooltip?: string;
+  actionLink?: string;
+  actionText?: string;
+  progress?: {
+    value: number;
+    max: number;
+    percentage: number;
+    label: string;
+  };
+  alert?: {
+    message: string;
+    type: "warning" | "info";
+  };
 };
 
-function SummaryCard({ title, amount, change }: SummaryCardProps) {
+function SummaryCard({ 
+  title, 
+  amount, 
+  change, 
+  tooltip, 
+  actionLink, 
+  actionText,
+  progress,
+  alert
+}: SummaryCardProps) {
   return (
-    <Card className="shadow-sm">
-      <CardContent className="p-4">
-        <div className="flex flex-col space-y-1.5">
-          <h3 className="text-sm font-medium text-muted">{title}</h3>
+    <Card className="shadow-sm flex flex-col">
+      <CardContent className="p-4 flex-grow">
+        <div className="flex flex-col space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <h3 className="text-sm font-medium text-muted">{title}</h3>
+              {tooltip && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="w-3.5 h-3.5 ml-1 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs max-w-xs">{tooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+          </div>
+          
           <div className="flex items-end justify-between">
             <div className="text-2xl font-bold">{amount}</div>
             <div className={`flex items-center text-sm ${
@@ -29,8 +72,42 @@ function SummaryCard({ title, amount, change }: SummaryCardProps) {
               <span>{change.value}</span>
             </div>
           </div>
+          
+          {progress && (
+            <div className="mt-2 space-y-1">
+              <div className="flex justify-between items-center text-xs text-muted-foreground">
+                <span>{progress.label}</span>
+                <span>{progress.percentage}%</span>
+              </div>
+              <Progress value={progress.percentage} className="h-1.5" />
+            </div>
+          )}
+          
+          {alert && (
+            <div className={`flex items-start mt-2 p-1.5 rounded-sm text-xs ${
+              alert.type === "warning" ? "bg-amber-50 text-amber-800" : "bg-sky-50 text-sky-800"
+            }`}>
+              {alert.type === "warning" ? (
+                <AlertCircle className="w-3.5 h-3.5 mr-1 flex-shrink-0 mt-0.5" />
+              ) : (
+                <Info className="w-3.5 h-3.5 mr-1 flex-shrink-0 mt-0.5" />
+              )}
+              <span>{alert.message}</span>
+            </div>
+          )}
         </div>
       </CardContent>
+      
+      {actionLink && actionText && (
+        <CardFooter className="px-4 py-2 pt-0 mt-auto">
+          <Link href={actionLink}>
+            <Button variant="ghost" size="sm" className="w-full p-1 h-8 text-xs justify-between hover:bg-muted/80">
+              {actionText}
+              <ArrowRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          </Link>
+        </CardFooter>
+      )}
     </Card>
   );
 }
@@ -40,22 +117,54 @@ export function SummaryCards() {
     { 
       title: "Total Income", 
       amount: "£4,250.00", 
-      change: { value: "+2.5%", isPositive: true } 
+      change: { value: "+2.5%", isPositive: true },
+      tooltip: "Your income for the current month compared to the previous month.",
+      actionLink: "/income-expenses",
+      actionText: "Manage income sources",
+      progress: {
+        value: 4250,
+        max: 5000,
+        percentage: 85,
+        label: "Of monthly target"
+      }
     },
     { 
       title: "Total Expenses", 
       amount: "£2,840.00", 
-      change: { value: "+3.2%", isPositive: false } 
+      change: { value: "+3.2%", isPositive: false },
+      tooltip: "Your expenses for the current month compared to the previous month.",
+      actionLink: "/income-expenses",
+      actionText: "Review spending",
+      alert: {
+        message: "Your expenses are higher than last month. Consider reviewing your spending habits.",
+        type: "warning"
+      }
     },
     { 
       title: "Total Savings", 
       amount: "£1,410.00", 
-      change: { value: "+1.8%", isPositive: true } 
+      change: { value: "+1.8%", isPositive: true },
+      tooltip: "The difference between your income and expenses this month.",
+      actionLink: "/savings-investments",
+      actionText: "View savings goals",
+      progress: {
+        value: 1410,
+        max: 1500,
+        percentage: 94,
+        label: "Of monthly target"
+      }
     },
     { 
       title: "Net Worth", 
       amount: "£128,750.00", 
-      change: { value: "+5.2%", isPositive: true } 
+      change: { value: "+5.2%", isPositive: true },
+      tooltip: "The total value of your assets minus your liabilities.",
+      actionLink: "/savings-investments",
+      actionText: "View breakdown",
+      alert: {
+        message: "Your net worth is growing steadily. Keep up the good work!",
+        type: "info"
+      }
     }
   ];
 
@@ -67,6 +176,11 @@ export function SummaryCards() {
           title={card.title}
           amount={card.amount}
           change={card.change}
+          tooltip={card.tooltip}
+          actionLink={card.actionLink}
+          actionText={card.actionText}
+          progress={card.progress}
+          alert={card.alert}
         />
       ))}
     </div>
