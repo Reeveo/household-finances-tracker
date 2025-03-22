@@ -29,11 +29,11 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  // Use a simple in-memory session store for now
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "personal-finance-tracker-secret",
     resave: false,
     saveUninitialized: false,
-    store: storage.sessionStore,
     cookie: {
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }

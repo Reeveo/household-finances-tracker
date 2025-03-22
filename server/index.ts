@@ -40,6 +40,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize database connection and create tables if needed
+  const dbConnected = await testConnection();
+  if (dbConnected) {
+    // Create tables if they don't exist
+    await createTables();
+    log("Database initialized successfully");
+  } else {
+    log("Warning: Database connection failed, falling back to in-memory storage");
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

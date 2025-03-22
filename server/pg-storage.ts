@@ -12,16 +12,18 @@ import {
 import { IStorage } from './storage';
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import createMemoryStore from "memorystore";
 
-const PostgresSessionStore = connectPg(session);
+const MemoryStore = createMemoryStore(session);
 
 export class PgStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new PostgresSessionStore({
-      pool,
-      createTableIfMissing: true
+    // Use MemoryStore from memorystore for now
+    // This is a temporary solution until we properly configure connect-pg-simple
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // 24 hours
     });
   }
 
@@ -29,7 +31,7 @@ export class PgStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     const result = await pool.query(
       'SELECT * FROM users WHERE id = $1',
-      [id]
+      [id.toString()]
     );
     return result.rows[0] || undefined;
   }
@@ -103,7 +105,7 @@ export class PgStorage implements IStorage {
     }
     
     query += ' WHERE id = $' + (params.length + 1) + ' RETURNING *';
-    params.push(id);
+    params.push(id.toString());
     
     const result = await pool.query(query, params);
     return result.rows[0] || undefined;
@@ -112,9 +114,9 @@ export class PgStorage implements IStorage {
   async deleteSharedAccess(id: number): Promise<boolean> {
     const result = await pool.query(
       'DELETE FROM shared_access WHERE id = $1',
-      [id]
+      [id.toString()]
     );
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Invitation methods
@@ -154,9 +156,9 @@ export class PgStorage implements IStorage {
   async deleteInvitation(id: number): Promise<boolean> {
     const result = await pool.query(
       'DELETE FROM invitations WHERE id = $1',
-      [id]
+      [id.toString()]
     );
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Income methods
@@ -222,9 +224,9 @@ export class PgStorage implements IStorage {
   async deleteIncome(id: number): Promise<boolean> {
     const result = await pool.query(
       'DELETE FROM incomes WHERE id = $1',
-      [id]
+      [id.toString()]
     );
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Expense methods
@@ -290,9 +292,9 @@ export class PgStorage implements IStorage {
   async deleteExpense(id: number): Promise<boolean> {
     const result = await pool.query(
       'DELETE FROM expenses WHERE id = $1',
-      [id]
+      [id.toString()]
     );
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Budget methods
@@ -358,9 +360,9 @@ export class PgStorage implements IStorage {
   async deleteBudget(id: number): Promise<boolean> {
     const result = await pool.query(
       'DELETE FROM budgets WHERE id = $1',
-      [id]
+      [id.toString()]
     );
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Savings goals methods
@@ -426,9 +428,9 @@ export class PgStorage implements IStorage {
   async deleteSavingsGoal(id: number): Promise<boolean> {
     const result = await pool.query(
       'DELETE FROM savings_goals WHERE id = $1',
-      [id]
+      [id.toString()]
     );
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Investment methods
@@ -494,9 +496,9 @@ export class PgStorage implements IStorage {
   async deleteInvestment(id: number): Promise<boolean> {
     const result = await pool.query(
       'DELETE FROM investments WHERE id = $1',
-      [id]
+      [id.toString()]
     );
-    return result.rowCount > 0;
+    return result.rowCount !== null && result.rowCount > 0;
   }
 
   // Helper method to convert camelCase to snake_case for PostgreSQL columns

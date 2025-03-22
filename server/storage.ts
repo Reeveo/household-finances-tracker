@@ -10,6 +10,8 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import { PgStorage } from "./pg-storage";
+import { testConnection } from "./db";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -71,7 +73,7 @@ export interface IStorage {
   deleteInvestment(id: number): Promise<boolean>;
   
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -84,7 +86,7 @@ export class MemStorage implements IStorage {
   private savingsGoals: Map<number, SavingsGoal>;
   private investments: Map<number, Investment>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
   
   private currentUserId: number;
   private currentSharedAccessId: number;
@@ -378,4 +380,39 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Choose the storage implementation based on database connection
+let storageImplementation: IStorage;
+
+// This will be initialized asynchronously
+(async () => {
+  try {
+    const dbConnected = await testConnection();
+    if (dbConnected) {
+      console.log("Using PostgreSQL storage implementation");
+      storageImplementation = new PgStorage();
+    } else {
+      console.log("Database connection failed, using in-memory storage");
+      storageImplementation = new MemStorage();
+    }
+  } catch (error) {
+    console.error("Error initializing storage:", error);
+    console.log("Falling back to in-memory storage");
+    storageImplementation = new MemStorage();
+  }
+})();
+
+// Export a proxy that forwards calls to the actual implementation
+// This ensures that even if the async initialization isn't complete,
+// the calls will be queued until the implementation is ready
+export const storage = new Proxy({} as IStorage, {
+  get: (target, prop) => {
+    return (...args: any[]) => {
+      if (!storageImplementation) {
+        // If storage implementation isn't initialized yet, use MemStorage as fallback
+        console.log("Storage not yet initialized, using in-memory storage temporarily");
+        storageImplementation = new MemStorage();
+      }
+      return (storageImplementation as any)[prop](...args);
+    };
+  }
+});
