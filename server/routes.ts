@@ -3,7 +3,16 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { z } from "zod";
-import { insertIncomeSchema, insertExpenseSchema, insertBudgetSchema, insertSavingsGoalSchema, insertInvestmentSchema } from "@shared/schema";
+import { 
+  insertIncomeSchema, 
+  insertExpenseSchema, 
+  insertBudgetSchema, 
+  insertSavingsGoalSchema, 
+  insertInvestmentSchema,
+  insertSharedAccessSchema,
+  insertInvitationSchema
+} from "@shared/schema";
+import crypto from "crypto";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication routes

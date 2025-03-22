@@ -19,6 +19,43 @@ export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
 });
 
+// Shared access and permissions
+export const sharedAccess = pgTable("shared_access", {
+  id: serial("id").primaryKey(),
+  ownerId: integer("owner_id").notNull().references(() => users.id),
+  partnerId: integer("partner_id").notNull().references(() => users.id),
+  accessLevel: text("access_level").notNull().default("view"), // view or edit
+  status: text("status").notNull().default("pending"), // pending, accepted, rejected
+  inviteDate: timestamp("invite_date").defaultNow(),
+  acceptedDate: timestamp("accepted_date"),
+});
+
+export const insertSharedAccessSchema = createInsertSchema(sharedAccess).pick({
+  ownerId: true,
+  partnerId: true,
+  accessLevel: true,
+});
+
+// Invitation tokens for partner access
+export const invitations = pgTable("invitations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  token: text("token").notNull().unique(),
+  email: text("email").notNull(),
+  accessLevel: text("access_level").notNull().default("view"),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertInvitationSchema = createInsertSchema(invitations).pick({
+  userId: true,
+  token: true,
+  email: true,
+  accessLevel: true,
+  expiresAt: true,
+});
+
 // Income sources schema
 export const incomes = pgTable("incomes", {
   id: serial("id").primaryKey(),
@@ -136,6 +173,12 @@ export const insertInvestmentSchema = createInsertSchema(investments).pick({
 // Export types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type SharedAccess = typeof sharedAccess.$inferSelect;
+export type InsertSharedAccess = z.infer<typeof insertSharedAccessSchema>;
+
+export type Invitation = typeof invitations.$inferSelect;
+export type InsertInvitation = z.infer<typeof insertInvitationSchema>;
 
 export type Income = typeof incomes.$inferSelect;
 export type InsertIncome = z.infer<typeof insertIncomeSchema>;

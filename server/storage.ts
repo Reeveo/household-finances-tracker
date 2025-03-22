@@ -4,7 +4,9 @@ import {
   expenses, type Expense, type InsertExpense,
   budgets, type Budget, type InsertBudget,
   savingsGoals, type SavingsGoal, type InsertSavingsGoal,
-  investments, type Investment, type InsertInvestment
+  investments, type Investment, type InsertInvestment,
+  sharedAccess, type SharedAccess, type InsertSharedAccess,
+  invitations, type Invitation, type InsertInvitation
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -16,6 +18,22 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  
+  // Shared Access methods
+  getSharedAccesses(userId: number): Promise<SharedAccess[]>;
+  createSharedAccess(access: InsertSharedAccess): Promise<SharedAccess>;
+  updateSharedAccessStatus(id: number, status: string, acceptedDate?: Date): Promise<SharedAccess | undefined>;
+  deleteSharedAccess(id: number): Promise<boolean>;
+  getSharedAccessById(id: number): Promise<SharedAccess | undefined>;
+  getSharedAccessByOwnerAndPartner(ownerId: number, partnerId: number): Promise<SharedAccess | undefined>;
+  
+  // Invitation methods
+  getInvitations(userId: number): Promise<Invitation[]>;
+  getInvitationByToken(token: string): Promise<Invitation | undefined>;
+  createInvitation(invitation: InsertInvitation): Promise<Invitation>;
+  deleteInvitation(id: number): Promise<boolean>;
+  useInvitation(id: number): Promise<Invitation | undefined>;
   
   // Income methods
   getIncomes(userId: number): Promise<Income[]>;
@@ -58,6 +76,8 @@ export interface IStorage {
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
+  private sharedAccesses: Map<number, SharedAccess>;
+  private invitations: Map<number, Invitation>;
   private incomes: Map<number, Income>;
   private expenses: Map<number, Expense>;
   private budgets: Map<number, Budget>;
@@ -67,6 +87,8 @@ export class MemStorage implements IStorage {
   sessionStore: session.SessionStore;
   
   private currentUserId: number;
+  private currentSharedAccessId: number;
+  private currentInvitationId: number;
   private currentIncomeId: number;
   private currentExpenseId: number;
   private currentBudgetId: number;
@@ -75,6 +97,8 @@ export class MemStorage implements IStorage {
 
   constructor() {
     this.users = new Map();
+    this.sharedAccesses = new Map();
+    this.invitations = new Map();
     this.incomes = new Map();
     this.expenses = new Map();
     this.budgets = new Map();
@@ -82,6 +106,8 @@ export class MemStorage implements IStorage {
     this.investments = new Map();
     
     this.currentUserId = 1;
+    this.currentSharedAccessId = 1;
+    this.currentInvitationId = 1;
     this.currentIncomeId = 1;
     this.currentExpenseId = 1;
     this.currentBudgetId = 1;
@@ -110,6 +136,90 @@ export class MemStorage implements IStorage {
     const user: User = { ...insertUser, id, createdAt };
     this.users.set(id, user);
     return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email
+    );
+  }
+  
+  // Shared Access methods
+  async getSharedAccesses(userId: number): Promise<SharedAccess[]> {
+    return Array.from(this.sharedAccesses.values()).filter(
+      (access) => access.ownerId === userId || access.partnerId === userId
+    );
+  }
+  
+  async getSharedAccessById(id: number): Promise<SharedAccess | undefined> {
+    return this.sharedAccesses.get(id);
+  }
+  
+  async getSharedAccessByOwnerAndPartner(ownerId: number, partnerId: number): Promise<SharedAccess | undefined> {
+    return Array.from(this.sharedAccesses.values()).find(
+      (access) => access.ownerId === ownerId && access.partnerId === partnerId
+    );
+  }
+  
+  async createSharedAccess(access: InsertSharedAccess): Promise<SharedAccess> {
+    const id = this.currentSharedAccessId++;
+    const inviteDate = new Date();
+    const status = "pending";
+    const sharedAccess: SharedAccess = { ...access, id, inviteDate, status, acceptedDate: null };
+    this.sharedAccesses.set(id, sharedAccess);
+    return sharedAccess;
+  }
+  
+  async updateSharedAccessStatus(id: number, status: string, acceptedDate?: Date): Promise<SharedAccess | undefined> {
+    const access = this.sharedAccesses.get(id);
+    if (!access) return undefined;
+    
+    const updatedAccess = { 
+      ...access, 
+      status, 
+      acceptedDate: status === "accepted" ? acceptedDate || new Date() : access.acceptedDate 
+    };
+    this.sharedAccesses.set(id, updatedAccess);
+    return updatedAccess;
+  }
+  
+  async deleteSharedAccess(id: number): Promise<boolean> {
+    return this.sharedAccesses.delete(id);
+  }
+  
+  // Invitation methods
+  async getInvitations(userId: number): Promise<Invitation[]> {
+    return Array.from(this.invitations.values()).filter(
+      (invitation) => invitation.userId === userId
+    );
+  }
+  
+  async getInvitationByToken(token: string): Promise<Invitation | undefined> {
+    return Array.from(this.invitations.values()).find(
+      (invitation) => invitation.token === token
+    );
+  }
+  
+  async createInvitation(invitation: InsertInvitation): Promise<Invitation> {
+    const id = this.currentInvitationId++;
+    const createdAt = new Date();
+    const newInvitation: Invitation = { ...invitation, id, createdAt, usedAt: null };
+    this.invitations.set(id, newInvitation);
+    return newInvitation;
+  }
+  
+  async useInvitation(id: number): Promise<Invitation | undefined> {
+    const invitation = this.invitations.get(id);
+    if (!invitation) return undefined;
+    
+    const usedAt = new Date();
+    const updatedInvitation = { ...invitation, usedAt };
+    this.invitations.set(id, updatedInvitation);
+    return updatedInvitation;
+  }
+  
+  async deleteInvitation(id: number): Promise<boolean> {
+    return this.invitations.delete(id);
   }
   
   // Income methods
