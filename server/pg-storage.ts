@@ -530,7 +530,7 @@ export class PgStorage implements IStorage {
       description, 
       frequency, 
       notes, 
-      recurring,
+      isRecurring,
       budgetMonth,
       budgetYear,
       paymentMethod,
@@ -542,7 +542,7 @@ export class PgStorage implements IStorage {
     const result = await pool.query(
       `INSERT INTO transactions (
         user_id, date, type, amount, category, subcategory, description, 
-        frequency, notes, recurring, budget_month, budget_year, payment_method, 
+        frequency, notes, is_recurring, budget_month, budget_year, payment_method, 
         balance, reference, import_hash, created_at
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()) RETURNING *`,
       [

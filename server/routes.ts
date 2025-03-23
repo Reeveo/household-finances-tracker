@@ -10,7 +10,8 @@ import {
   insertSavingsGoalSchema, 
   insertInvestmentSchema,
   insertSharedAccessSchema,
-  insertInvitationSchema
+  insertInvitationSchema,
+  insertTransactionSchema
 } from "@shared/schema";
 import crypto from "crypto";
 
@@ -646,6 +647,210 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteInvitation(invitationId);
       res.status(204).send();
     } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Transaction routes
+  app.get("/api/transactions", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const targetUserId = parseInt(req.query.userId as string) || userId;
+      
+      // If requesting someone else's data, check shared access
+      if (targetUserId !== userId) {
+        const access = await hasAccessToUserData(userId, targetUserId);
+        if (!access.hasAccess) {
+          return res.status(403).json({ message: "Not authorized to view this user's data" });
+        }
+      }
+      
+      // Handle optional date range parameters
+      if (req.query.startDate && req.query.endDate) {
+        const startDate = new Date(req.query.startDate as string);
+        const endDate = new Date(req.query.endDate as string);
+        const transactions = await storage.getTransactionsByDateRange(targetUserId, startDate, endDate);
+        return res.json(transactions);
+      }
+      
+      // Handle category filter
+      if (req.query.category) {
+        const category = req.query.category as string;
+        const transactions = await storage.getTransactionsByCategory(targetUserId, category);
+        return res.json(transactions);
+      }
+      
+      // Handle budget month filter
+      if (req.query.month && req.query.year) {
+        const month = parseInt(req.query.month as string, 10);
+        const year = parseInt(req.query.year as string, 10);
+        const transactions = await storage.getTransactionsByBudgetMonth(targetUserId, month, year);
+        return res.json(transactions);
+      }
+      
+      // Default: get all transactions
+      const transactions = await storage.getTransactions(targetUserId);
+      res.json(transactions);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.post("/api/transactions", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const transactionData = { ...req.body, userId };
+      const validatedData = insertTransactionSchema.parse(transactionData);
+      
+      // Check for duplicates by import hash if provided
+      if (validatedData.importHash) {
+        const existingTransaction = await storage.getTransactionByImportHash(validatedData.importHash);
+        if (existingTransaction) {
+          return res.status(409).json({ 
+            message: "Transaction with this import hash already exists",
+            existingTransaction
+          });
+        }
+      }
+      
+      const transaction = await storage.createTransaction(validatedData);
+      res.status(201).json(transaction);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ errors: error.errors });
+      } else {
+        console.error("Error creating transaction:", error);
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  });
+
+  app.post("/api/transactions/batch", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Validate all transactions in the batch
+      const transactionDataArray = req.body.transactions || [];
+      if (!Array.isArray(transactionDataArray)) {
+        return res.status(400).json({ message: "Expected transactions array" });
+      }
+      
+      // Add userId to each transaction and validate
+      const validatedTransactions = [];
+      const skippedTransactions = [];
+      
+      for (const transaction of transactionDataArray) {
+        try {
+          const transactionWithUserId = { ...transaction, userId };
+          const validatedData = insertTransactionSchema.parse(transactionWithUserId);
+          
+          // Check for duplicates by import hash if provided
+          if (validatedData.importHash) {
+            const existingTransaction = await storage.getTransactionByImportHash(validatedData.importHash);
+            if (existingTransaction) {
+              skippedTransactions.push({
+                transaction: validatedData,
+                reason: "Duplicate import hash",
+                existingTransaction
+              });
+              continue;
+            }
+          }
+          
+          validatedTransactions.push(validatedData);
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            skippedTransactions.push({
+              transaction,
+              reason: "Validation error",
+              errors: error.errors
+            });
+          } else {
+            skippedTransactions.push({
+              transaction,
+              reason: "Unknown error"
+            });
+          }
+        }
+      }
+      
+      // If no valid transactions, return error
+      if (validatedTransactions.length === 0) {
+        return res.status(400).json({ 
+          message: "No valid transactions to process",
+          skipped: skippedTransactions
+        });
+      }
+      
+      // Create all valid transactions
+      const createdTransactions = await storage.createManyTransactions(validatedTransactions);
+      
+      res.status(201).json({
+        created: createdTransactions,
+        skipped: skippedTransactions,
+        stats: {
+          total: transactionDataArray.length,
+          created: createdTransactions.length,
+          skipped: skippedTransactions.length
+        }
+      });
+    } catch (error) {
+      console.error("Error creating batch transactions:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.put("/api/transactions/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const transactionId = parseInt(req.params.id, 10);
+      
+      const existingTransaction = await storage.getTransactionById(transactionId);
+      if (!existingTransaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      // Check if user owns the transaction
+      if (existingTransaction.userId !== userId) {
+        // Check if user has edit access to this transaction via shared access
+        const access = await hasAccessToUserData(userId, existingTransaction.userId);
+        if (!access.hasAccess) {
+          return res.status(403).json({ message: "Not authorized" });
+        }
+        
+        if (access.accessLevel !== "edit") {
+          return res.status(403).json({ message: "You only have view access to this data" });
+        }
+      }
+
+      const updatedTransaction = await storage.updateTransaction(transactionId, req.body);
+      res.json(updatedTransaction);
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/transactions/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const transactionId = parseInt(req.params.id, 10);
+      
+      const existingTransaction = await storage.getTransactionById(transactionId);
+      if (!existingTransaction) {
+        return res.status(404).json({ message: "Transaction not found" });
+      }
+      
+      // Only the transaction owner can delete it
+      if (existingTransaction.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+
+      await storage.deleteTransaction(transactionId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
