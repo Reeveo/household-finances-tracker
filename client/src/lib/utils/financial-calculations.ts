@@ -206,6 +206,14 @@ export function calculateBudgetProgress(
   current: number,
   target: number
 ): { percentage: number; isOverBudget: boolean } {
+  // Handle division by zero case
+  if (target === 0) {
+    return {
+      percentage: 100,
+      isOverBudget: current > 0,
+    };
+  }
+  
   const percentage = Math.round((current / target) * 100);
   return {
     percentage,
