@@ -37,3 +37,5 @@ export function renderWithProviders(
 
 // Re-export everything
 export * from '@testing-library/react';
+// Include jest-dom matchers
+import '@testing-library/jest-dom';
