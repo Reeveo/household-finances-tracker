@@ -532,7 +532,7 @@ export function TransactionManagement() {
 
       {/* Add/Edit Transaction Dialog */}
       <Dialog open={showAddDialog} onOpenChange={handleDialogChange}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingTransaction ? "Edit Transaction" : "Add Transaction"}</DialogTitle>
             <DialogDescription>
