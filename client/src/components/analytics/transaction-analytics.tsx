@@ -709,6 +709,7 @@ export function TransactionAnalytics() {
             </div>
 
             {/* Tab content */}
+            <Tabs value={activeTab} className="w-full">
             <TabsContent value="overview" className="mt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Category Distribution */}
@@ -1115,6 +1116,7 @@ export function TransactionAnalytics() {
                 </Card>
               </div>
             </TabsContent>
+            </Tabs>
           </>
         )}
       </CardContent>
