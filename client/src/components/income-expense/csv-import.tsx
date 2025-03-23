@@ -612,10 +612,11 @@ export function CSVImport() {
             // Single amount column format
             const amountStr = values[mapping.amount];
             amount = parseFloat(amountStr.replace(/[£$,]/g, '') || '0');
-          } else if (mapping.debitAmount !== null && mapping.creditAmount !== null) {
+          } else if (mapping.debitAmount !== null && mapping.creditAmount !== null && 
+                     mapping.debitAmount >= 0 && mapping.creditAmount >= 0) {
             // Separate debit/credit columns format
-            const debitStr = mapping.debitAmount >= 0 ? values[mapping.debitAmount] : '0';
-            const creditStr = mapping.creditAmount >= 0 ? values[mapping.creditAmount] : '0';
+            const debitStr = values[mapping.debitAmount];
+            const creditStr = values[mapping.creditAmount];
             
             const debit = parseFloat(debitStr.replace(/[£$,]/g, '') || '0');
             const credit = parseFloat(creditStr.replace(/[£$,]/g, '') || '0');
@@ -656,7 +657,8 @@ export function CSVImport() {
             category: suggestedCategory,
             subcategory: suggestedSubcategory,
             budgetMonth: 'current', // Default to current month
-            isValid: true
+            isValid: true,
+            isDuplicate: false
           };
           
           // Set a unique ID for deduplication
@@ -695,16 +697,16 @@ export function CSVImport() {
   };
   
   // Handle changes to custom column mapping
-  const updateCustomMapping = (columnType: ColumnType, columnIndex: number) => {
+  const updateCustomMapping = (columnType: ColumnType, columnIndex: number | null) => {
     setCustomMapping(prevMapping => {
       const newMapping = { ...prevMapping };
       
       // Special handling for amount vs debit/credit
-      if (columnType === 'amount' && columnIndex !== null) {
+      if (columnType === 'amount') {
         newMapping.amount = columnIndex;
         newMapping.debitAmount = null;
         newMapping.creditAmount = null;
-      } else if ((columnType === 'debitAmount' || columnType === 'creditAmount') && columnIndex !== null) {
+      } else if (columnType === 'debitAmount' || columnType === 'creditAmount') {
         if (columnType === 'debitAmount') newMapping.debitAmount = columnIndex;
         if (columnType === 'creditAmount') newMapping.creditAmount = columnIndex;
         newMapping.amount = null;
@@ -1090,8 +1092,11 @@ export function CSVImport() {
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Balance Column (Optional)</label>
                 <Select
-                  value={customMapping.balance?.toString() || '-1'}
-                  onValueChange={(val) => updateCustomMapping('balance', parseInt(val) >= 0 ? parseInt(val) : null)}
+                  value={customMapping.balance !== null ? customMapping.balance.toString() : '-1'}
+                  onValueChange={(val) => {
+                    const index = parseInt(val);
+                    updateCustomMapping('balance', index >= 0 ? index : null);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select column" />
@@ -1110,8 +1115,11 @@ export function CSVImport() {
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Reference Column (Optional)</label>
                 <Select
-                  value={customMapping.reference?.toString() || '-1'}
-                  onValueChange={(val) => updateCustomMapping('reference', parseInt(val) >= 0 ? parseInt(val) : null)}
+                  value={customMapping.reference !== null ? customMapping.reference.toString() : '-1'}
+                  onValueChange={(val) => {
+                    const index = parseInt(val);
+                    updateCustomMapping('reference', index >= 0 ? index : null);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select column" />
