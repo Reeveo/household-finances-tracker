@@ -710,6 +710,11 @@ export function TransactionAnalytics() {
 
             {/* Tab content */}
             <Tabs value={activeTab} className="w-full">
+              <TabsList className="hidden">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="trends">Spending Trends</TabsTrigger>
+                <TabsTrigger value="merchants">Top Merchants</TabsTrigger>
+              </TabsList>
               <TabsContent value="overview" className="mt-0">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Category Distribution */}
