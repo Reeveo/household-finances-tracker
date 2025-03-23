@@ -548,6 +548,24 @@ export function CSVImport() {
           console.log(`Line ${i} category:`, suggestedCategory);
           console.log(`Line ${i} subcategory:`, suggestedSubcategory);
           
+          // Extract month from transaction date for budget month
+          let budgetMonthValue = 'current'; // Fallback value
+          
+          if (normalizedDate && normalizedDate.includes('-')) {
+            const dateParts = normalizedDate.split('-');
+            if (dateParts.length >= 2) {
+              // Get month name from month number (0-11)
+              const monthIndex = parseInt(dateParts[1], 10) - 1;
+              const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 
+                                'july', 'august', 'september', 'october', 'november', 'december'];
+              
+              if (monthIndex >= 0 && monthIndex < 12) {
+                budgetMonthValue = monthNames[monthIndex];
+                console.log(`Setting budget month to match transaction date: ${normalizedDate} -> ${budgetMonthValue}`);
+              }
+            }
+          }
+          
           // Create transaction object
           const transaction: BankTransaction = {
             id: '', // Will be set after all properties are available
@@ -559,7 +577,7 @@ export function CSVImport() {
             type,
             category: suggestedCategory,
             subcategory: suggestedSubcategory,
-            budgetMonth: 'current', // Default to current month
+            budgetMonth: budgetMonthValue, // Set to match transaction month
             isValid: true,
             isDuplicate: false
           };
