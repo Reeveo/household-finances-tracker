@@ -20,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Loader2, RefreshCw, Save, Shield, Moon, Sun, User as UserIcon, BellRing, Lock, CreditCard, AlarmClock, FileText, HelpCircle, Trash2 } from "lucide-react";
+import { Loader2, RefreshCw, Save, Shield, Moon, Sun, User as UserIcon, BellRing, Lock, CreditCard, AlarmClock, FileText, HelpCircle, Trash2, Users, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Form schemas
@@ -228,12 +228,15 @@ export default function SettingsPage() {
           </div>
           
           <Tabs defaultValue="profile" className="w-full">
-            <TabsList className="grid grid-cols-2 md:grid-cols-4 text-xs sm:text-sm mb-4">
+            <TabsList className="grid grid-cols-2 md:grid-cols-5 text-xs sm:text-sm mb-4">
               <TabsTrigger value="profile" className="px-1 sm:px-3 py-1.5 h-9 sm:h-10">
                 Profile
               </TabsTrigger>
               <TabsTrigger value="security" className="px-1 sm:px-3 py-1.5 h-9 sm:h-10">
                 Security
+              </TabsTrigger>
+              <TabsTrigger value="sharing" className="px-1 sm:px-3 py-1.5 h-9 sm:h-10">
+                Sharing
               </TabsTrigger>
               <TabsTrigger value="appearance" className="px-1 sm:px-3 py-1.5 h-9 sm:h-10">
                 Appearance
@@ -467,6 +470,89 @@ export default function SettingsPage() {
                       <Button variant="outline" size="sm" disabled className="text-xs">
                         Manage Sessions
                       </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            {/* Sharing Settings */}
+            <TabsContent value="sharing" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Users className="mr-2 h-5 w-5" />
+                    Partner Access
+                  </CardTitle>
+                  <CardDescription>
+                    Share your financial data with trusted partners
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">Active Partners</h3>
+                      <div className="rounded-lg border overflow-hidden">
+                        <div className="p-5 text-center text-muted-foreground text-sm">
+                          You haven't shared your data with any partners yet.
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div>
+                      <h3 className="text-sm font-medium mb-3">Invite a Partner</h3>
+                      <div className="grid gap-4">
+                        <div className="grid grid-cols-1 gap-3">
+                          <div className="flex flex-col space-y-1.5">
+                            <Label htmlFor="partnerEmail">Partner's Email</Label>
+                            <Input id="partnerEmail" placeholder="partner@example.com" />
+                          </div>
+                          
+                          <div className="flex flex-col space-y-1.5">
+                            <Label htmlFor="accessLevel">Access Level</Label>
+                            <Select defaultValue="view">
+                              <SelectTrigger id="accessLevel">
+                                <SelectValue placeholder="Select access level" />
+                              </SelectTrigger>
+                              <SelectContent position="popper">
+                                <SelectItem value="view">View Only</SelectItem>
+                                <SelectItem value="edit">Edit</SelectItem>
+                                <SelectItem value="full">Full Access</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              View Only: Partner can see your financial data.<br />
+                              Edit: Partner can modify transactions.<br />
+                              Full Access: Partner has complete control.
+                            </p>
+                          </div>
+                        </div>
+                        <Button className="w-full sm:w-auto">
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Send Invitation
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <FileText className="mr-2 h-5 w-5" />
+                    Pending Invitations
+                  </CardTitle>
+                  <CardDescription>
+                    Manage your sent invitations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="p-5 text-center text-muted-foreground text-sm">
+                      No pending invitations.
                     </div>
                   </div>
                 </CardContent>
