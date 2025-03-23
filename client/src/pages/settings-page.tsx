@@ -490,6 +490,19 @@ export default function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div className="bg-muted/50 rounded-lg p-3 mb-4 border border-amber-200 flex gap-2">
+                    <div className="text-amber-500 mt-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                      </svg>
+                    </div>
+                    <div className="text-sm">
+                      <strong>Demo Feature:</strong> This is a UI demonstration. Email delivery for partner invitations is not configured in this demo.
+                    </div>
+                  </div>
+                  
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-sm font-medium mb-2">Active Partners</h3>
@@ -530,9 +543,9 @@ export default function SettingsPage() {
                             </p>
                           </div>
                         </div>
-                        <Button className="w-full sm:w-auto">
+                        <Button className="w-full sm:w-auto" disabled>
                           <UserPlus className="mr-2 h-4 w-4" />
-                          Send Invitation
+                          Send Invitation (Demo)
                         </Button>
                       </div>
                     </div>
@@ -700,6 +713,18 @@ export default function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  <div className="bg-muted/50 rounded-lg p-3 mb-4 border border-amber-200 flex gap-2">
+                    <div className="text-amber-500 mt-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                      </svg>
+                    </div>
+                    <div className="text-sm">
+                      <strong>Demo Feature:</strong> This is a UI demonstration. Email and notification delivery is not configured in this demo.
+                    </div>
+                  </div>
                   <Form {...notificationsForm}>
                     <form onSubmit={notificationsForm.handleSubmit(onNotificationsSubmit)} className="space-y-4">
                       <FormField
@@ -789,13 +814,14 @@ export default function SettingsPage() {
                       <div className="flex justify-end">
                         <Button 
                           type="submit" 
-                          disabled={isSubmitting || !notificationsForm.formState.isDirty}
+                          disabled={true}
                           className="px-4 sm:px-5 py-2 h-10 text-sm sm:text-base w-full sm:w-auto"
+                          title="This feature is not available in the demo"
                         >
                           {isSubmitting && (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           )}
-                          Save Preferences
+                          Save Preferences (Demo)
                         </Button>
                       </div>
                     </form>
