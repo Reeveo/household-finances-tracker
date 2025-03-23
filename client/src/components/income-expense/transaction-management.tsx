@@ -224,6 +224,8 @@ const transactionSchema = z.object({
   paymentMethod: z.string().optional(),
   isRecurring: z.boolean().default(false),
   frequency: z.string().optional(),
+  hasEndDate: z.boolean().default(false),
+  endDate: z.date().optional(),
   budgetMonth: z.string().min(1, { message: "Budget month is required" }),
   notes: z.string().optional(),
 });

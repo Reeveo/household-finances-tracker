@@ -211,7 +211,10 @@ export const transactions = pgTable("transactions", {
   budgetMonth: integer("budget_month"),
   budgetYear: integer("budget_year"),
   isRecurring: boolean("is_recurring").default(false),
-  frequency: text("frequency"), // monthly, weekly, annual
+  frequency: text("frequency"), // monthly, weekly, annual, quarterly
+  endDate: date("end_date"), // Optional end date for recurring transactions
+  hasEndDate: boolean("has_end_date").default(false), // Whether the recurring transaction has an end date
+  nextDueDate: date("next_due_date"), // Next occurrence date for recurring transactions
   notes: text("notes"),
   importHash: text("import_hash"), // For deduplication
   createdAt: timestamp("created_at").defaultNow(),
@@ -232,6 +235,9 @@ export const insertTransactionSchema = createInsertSchema(transactions).pick({
   budgetYear: true,
   isRecurring: true,
   frequency: true,
+  endDate: true,
+  hasEndDate: true,
+  nextDueDate: true,
   notes: true,
   importHash: true,
 });
