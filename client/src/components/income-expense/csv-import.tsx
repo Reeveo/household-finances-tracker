@@ -320,15 +320,43 @@ function suggestCategoryWithConfidence(description: string, amount: number) {
 }
 
 // Month options for budget assignment
-const BUDGET_MONTHS = [
-  { value: "current", label: "Current Month (June 2023)" },
-  { value: "next", label: "Next Month (July 2023)" },
-  { value: "august", label: "August 2023" },
-  { value: "september", label: "September 2023" },
-  { value: "october", label: "October 2023" },
-  { value: "november", label: "November 2023" },
-  { value: "december", label: "December 2023" }
-];
+// Get current and next few months dynamically
+const getMonthOptions = () => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-11
+  
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  
+  // Current and next month options
+  const options = [
+    { 
+      value: "current", 
+      label: `Current Month (${monthNames[currentMonth]} ${currentYear})` 
+    },
+    { 
+      value: "next", 
+      label: `Next Month (${monthNames[(currentMonth + 1) % 12]} ${currentMonth === 11 ? currentYear + 1 : currentYear})` 
+    }
+  ];
+  
+  // Add next 5 months
+  for (let i = 2; i < 7; i++) {
+    const futureMonth = (currentMonth + i) % 12;
+    const futureYear = currentYear + Math.floor((currentMonth + i) / 12);
+    options.push({
+      value: monthNames[futureMonth].toLowerCase(),
+      label: `${monthNames[futureMonth]} ${futureYear}`
+    });
+  }
+  
+  return options;
+};
+
+const BUDGET_MONTHS = getMonthOptions();
 
 export function CSVImport() {
   // State for the import process
