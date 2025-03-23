@@ -229,14 +229,9 @@ function suggestSubcategory(category: string, description: string): string {
 
 // Column Mapper Type
 type ColumnMapping = {
-  transactionDate: number;
-  description: number;
-  debitAmount: number | null;
-  creditAmount: number | null; 
-  amount: number | null;  // Some banks use a single amount column with negative for debits
-  balance: number | null;
-  reference: number | null;
-  type: number | null;
+  [K in 'transactionDate' | 'description']: number;
+} & {
+  [K in 'debitAmount' | 'creditAmount' | 'amount' | 'balance' | 'reference' | 'type']: number | null;
 };
 
 // Available Column Types
@@ -707,12 +702,35 @@ export function CSVImport() {
         newMapping.debitAmount = null;
         newMapping.creditAmount = null;
       } else if (columnType === 'debitAmount' || columnType === 'creditAmount') {
-        if (columnType === 'debitAmount') newMapping.debitAmount = columnIndex;
-        if (columnType === 'creditAmount') newMapping.creditAmount = columnIndex;
+        if (columnType === 'debitAmount') {
+          newMapping.debitAmount = columnIndex;
+        }
+        if (columnType === 'creditAmount') {
+          newMapping.creditAmount = columnIndex;
+        }
         newMapping.amount = null;
       } else {
-        // Regular column update
-        newMapping[columnType] = columnIndex;
+        // Handle optional column types that can be null
+        switch (columnType) {
+          case 'balance':
+            newMapping.balance = columnIndex;
+            break;
+          case 'reference':
+            newMapping.reference = columnIndex;
+            break;
+          case 'type':
+            newMapping.type = columnIndex;
+            break;
+          case 'transactionDate':
+            newMapping.transactionDate = columnIndex !== null ? columnIndex : 0; 
+            break;
+          case 'description':
+            newMapping.description = columnIndex !== null ? columnIndex : 1;
+            break;
+          default:
+            // TypeScript should have caught all cases, but just in case
+            break;
+        }
       }
       
       return newMapping;
