@@ -15,7 +15,8 @@ import {
   Coffee,
   Zap,
   Briefcase,
-  PiggyBank
+  PiggyBank,
+  Loader2
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
@@ -30,86 +31,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Link } from "wouter";
-
-// Enhanced sample data with merchant logos and subcategories
-const transactions = [
-  {
-    id: 1,
-    date: '12 Jun 2023',
-    description: 'Groceries - Tesco',
-    merchant: 'Tesco',
-    merchantLogo: 'tesco.svg',
-    category: 'Essentials',
-    subcategory: 'Groceries',
-    amount: -82.47,
-    paymentMethod: 'Credit Card',
-    recurring: false,
-  },
-  {
-    id: 2,
-    date: '10 Jun 2023',
-    description: 'Monthly Salary',
-    merchant: 'Acme Inc',
-    merchantLogo: 'acme.svg',
-    category: 'Income',
-    subcategory: 'Salary',
-    amount: 3850.00,
-    paymentMethod: 'Bank Transfer',
-    recurring: true,
-    frequency: 'Monthly',
-  },
-  {
-    id: 3,
-    date: '09 Jun 2023',
-    description: 'Coffee Shop',
-    merchant: 'Costa Coffee',
-    merchantLogo: 'costa.svg',
-    category: 'Lifestyle',
-    subcategory: 'Dining Out',
-    amount: -4.85,
-    paymentMethod: 'Debit Card',
-    recurring: false,
-  },
-  {
-    id: 4,
-    date: '07 Jun 2023',
-    description: 'Electricity Bill',
-    merchant: 'British Gas',
-    merchantLogo: 'britishgas.svg',
-    category: 'Essentials',
-    subcategory: 'Utilities',
-    amount: -78.32,
-    paymentMethod: 'Direct Debit',
-    recurring: true,
-    frequency: 'Monthly',
-  },
-  {
-    id: 5,
-    date: '05 Jun 2023',
-    description: 'Investment Deposit',
-    merchant: 'Vanguard',
-    merchantLogo: 'vanguard.svg',
-    category: 'Savings',
-    subcategory: 'Investments',
-    amount: -400.00,
-    paymentMethod: 'Bank Transfer',
-    recurring: true,
-    frequency: 'Monthly',
-  },
-  {
-    id: 6,
-    date: '03 Jun 2023',
-    description: 'Rent Payment',
-    merchant: 'Landlord',
-    merchantLogo: '',
-    category: 'Essentials',
-    subcategory: 'Housing',
-    amount: -1200.00,
-    paymentMethod: 'Standing Order',
-    recurring: true,
-    frequency: 'Monthly',
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { Transaction } from "@shared/schema";
+import { format } from "date-fns";
 
 // Map categories to badge colors and icons
 const categoryConfig: Record<string, {
@@ -153,21 +77,129 @@ const subcategoryIcons = {
   // Add more subcategory mappings as needed
 };
 
+type TransactionWithUI = {
+  id: number;
+  date: string;
+  formattedDate: string;
+  description: string;
+  amount: number;
+  category: string;
+  subcategory: string | null;
+  paymentMethod: string | null;
+  merchant: string;
+};
+
 export function RecentTransactions() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   
+  // Fetch transactions from API
+  const { data: transactions, isLoading, error } = useQuery<Transaction[]>({
+    queryKey: ['/api/transactions'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+  
+  // Process transactions for UI display
+  const processedTransactions: TransactionWithUI[] = transactions 
+    ? transactions.map(transaction => {
+        const date = new Date(transaction.date);
+        const merchant = extractMerchant(transaction.description);
+        
+        return {
+          id: transaction.id,
+          date: transaction.date,
+          formattedDate: format(date, 'dd MMM yyyy'),
+          description: transaction.description,
+          amount: parseFloat(transaction.amount),
+          category: transaction.category,
+          subcategory: transaction.subcategory,
+          paymentMethod: transaction.paymentMethod,
+          merchant: merchant || "Unknown",
+        };
+      }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10)
+    : [];
+  
   // Filter transactions based on search query and category filter
-  const filteredTransactions = transactions.filter(transaction => {
+  const filteredTransactions = processedTransactions.filter(transaction => {
     const matchesSearch = searchQuery === "" || 
       transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       transaction.merchant.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.subcategory.toLowerCase().includes(searchQuery.toLowerCase());
+      (transaction.subcategory && transaction.subcategory.toLowerCase().includes(searchQuery.toLowerCase()));
       
     const matchesCategory = categoryFilter === "All" || transaction.category === categoryFilter;
     
     return matchesSearch && matchesCategory;
   });
+  
+  // Helper function to extract merchant name from description
+  function extractMerchant(description: string): string {
+    // Common patterns in bank statements: "PAYMENT TO XXX", "PURCHASE AT XXX", etc.
+    const patterns = [
+      /PAYMENT TO (.+?)(?:\s+REF|\s*$)/i,
+      /PURCHASE AT (.+?)(?:\s+ON|\s*$)/i,
+      /(?:DEPOSIT|TRANSFER) FROM (.+?)(?:\s+REF|\s*$)/i,
+      /(.+?)(?:\s+-|\s*$)/i,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = description.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    
+    // If no pattern matches, use the first 15 chars as the merchant name
+    return description.substring(0, 15).trim();
+  }
+  
+  if (isLoading) {
+    return (
+      <Card className="shadow-sm">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (error) {
+    return (
+      <Card className="shadow-sm">
+        <CardContent className="p-6">
+          <div className="text-center py-8">
+            <p className="text-destructive">Failed to load transactions</p>
+            <Button 
+              variant="link" 
+              className="mt-2"
+              onClick={() => window.location.reload()}
+            >
+              Try again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  if (processedTransactions.length === 0) {
+    return (
+      <Card className="shadow-sm">
+        <CardContent className="p-6">
+          <div className="text-center py-8">
+            <h3 className="text-lg font-semibold mb-2">No Transactions</h3>
+            <p className="text-muted-foreground mb-4">You haven't added any transactions yet.</p>
+            <Link href="/income-expenses">
+              <Button>
+                Add Transactions
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
   
   return (
     <Card className="shadow-sm">
@@ -224,7 +256,7 @@ export function RecentTransactions() {
                   <td className="p-2 pl-4 text-sm text-muted-foreground">
                     <div className="flex items-center">
                       <CalendarIcon className="h-3.5 w-3.5 mr-2 text-muted-foreground/70" />
-                      {transaction.date}
+                      {transaction.formattedDate}
                     </div>
                   </td>
                   <td className="p-2 text-sm">
@@ -242,14 +274,14 @@ export function RecentTransactions() {
                     <Badge 
                       variant="outline"
                       className={`
-                        ${categoryConfig[transaction.category].bg} 
-                        ${categoryConfig[transaction.category].text}
-                        ${categoryConfig[transaction.category].border}
+                        ${categoryConfig[transaction.category]?.bg || 'bg-gray-100'} 
+                        ${categoryConfig[transaction.category]?.text || 'text-gray-800'}
+                        ${categoryConfig[transaction.category]?.border || 'border-gray-200'}
                       `}
                     >
                       <span className="flex items-center">
                         {(() => {
-                          const Icon = categoryConfig[transaction.category].icon;
+                          const Icon = categoryConfig[transaction.category]?.icon;
                           return Icon && <Icon className="h-3 w-3 mr-1" />;
                         })()}
                         {transaction.category}
@@ -295,20 +327,20 @@ export function RecentTransactions() {
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <div className="flex items-center">
                     <CalendarIcon className="h-3 w-3 mr-1" />
-                    {transaction.date}
+                    {transaction.formattedDate}
                   </div>
                   <Badge 
                     variant="outline"
                     className={`
-                      ${categoryConfig[transaction.category].bg} 
-                      ${categoryConfig[transaction.category].text}
-                      ${categoryConfig[transaction.category].border}
+                      ${categoryConfig[transaction.category]?.bg || 'bg-gray-100'} 
+                      ${categoryConfig[transaction.category]?.text || 'text-gray-800'}
+                      ${categoryConfig[transaction.category]?.border || 'border-gray-200'}
                       text-xs
                     `}
                   >
                     <span className="flex items-center">
                       {(() => {
-                        const Icon = categoryConfig[transaction.category].icon;
+                        const Icon = categoryConfig[transaction.category]?.icon;
                         return Icon && <Icon className="h-2.5 w-2.5 mr-1" />;
                       })()}
                       {transaction.category}
@@ -339,9 +371,9 @@ export function RecentTransactions() {
       
       <CardFooter className="px-5 py-3 border-t flex justify-between">
         <div className="text-xs text-muted-foreground">
-          Showing {filteredTransactions.length} of {transactions.length} transactions
+          Showing {filteredTransactions.length} of {processedTransactions.length} transactions
         </div>
-        <Link href="/income-expenses">
+        <Link href="/income-expense">
           <Button variant="link" size="sm" className="text-xs p-0 h-auto">
             View all transactions
           </Button>
