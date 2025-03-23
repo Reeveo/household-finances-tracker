@@ -882,8 +882,12 @@ export function CSVImport() {
         </div>
         
         <div>
-          <label htmlFor="csv-upload">
-            <Button disabled={isUploading} size="lg">
+          <div className="flex flex-col items-center gap-2">
+            <Button 
+              disabled={isUploading} 
+              size="lg" 
+              onClick={() => document.getElementById('csv-upload')?.click()}
+            >
               {isUploading ? 'Processing...' : 'Select CSV File'}
               <Upload className="ml-2 h-4 w-4" />
             </Button>
@@ -895,7 +899,7 @@ export function CSVImport() {
               onChange={handleFileUpload}
               disabled={isUploading}
             />
-          </label>
+          </div>
         </div>
       </div>
     </div>
