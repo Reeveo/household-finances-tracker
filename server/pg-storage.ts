@@ -52,6 +52,44 @@ export class PgStorage implements IStorage {
     );
     return result.rows[0] || undefined;
   }
+  
+  async getUserWithPassword(id: number): Promise<User | undefined> {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE id = $1',
+      [id.toString()]
+    );
+    return result.rows[0] || undefined;
+  }
+  
+  async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
+    // Create set clauses and values array for query
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+    
+    // Add each update field to the query
+    Object.entries(updates).forEach(([key, value]) => {
+      setClauses.push(`${this.camelToSnakeCase(key)} = $${paramIndex}`);
+      values.push(value);
+      paramIndex++;
+    });
+    
+    // Add the user ID as the last parameter
+    values.push(id.toString());
+    
+    // Only proceed if there are fields to update
+    if (setClauses.length === 0) return undefined;
+    
+    const query = `
+      UPDATE users 
+      SET ${setClauses.join(', ')} 
+      WHERE id = $${paramIndex} 
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, values);
+    return result.rows[0] || undefined;
+  }
 
   async createUser(user: InsertUser): Promise<User> {
     const { username, password, name, email } = user;

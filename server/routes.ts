@@ -934,6 +934,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User routes (for settings page)
+  app.patch("/api/users/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const targetUserId = parseInt(req.params.id, 10);
+      
+      // Users can only update their own profile
+      if (userId !== targetUserId) {
+        return res.status(403).json({ message: "Not authorized to update this user's profile" });
+      }
+      
+      // Only allow updating certain fields
+      const allowedUpdates = ['name', 'email'];
+      const updates: Record<string, any> = {};
+      
+      for (const field of allowedUpdates) {
+        if (req.body[field] !== undefined) {
+          updates[field] = req.body[field];
+        }
+      }
+      
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+      
+      const user = await storage.updateUser(userId, updates);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  });
+
+  // Password update route
+  app.patch("/api/users/:id/password", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const targetUserId = parseInt(req.params.id, 10);
+      
+      // Users can only update their own password
+      if (userId !== targetUserId) {
+        return res.status(403).json({ message: "Not authorized to update this user's password" });
+      }
+      
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ 
+          message: "Both current password and new password are required" 
+        });
+      }
+      
+      // Get user with password
+      const user = await storage.getUserWithPassword(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Verify current password
+      const { comparePasswords } = await import('./auth');
+      const isMatch = await comparePasswords(currentPassword, user.password);
+      
+      if (!isMatch) {
+        return res.status(400).json({ message: "Current password is incorrect" });
+      }
+      
+      // Hash new password
+      const { hashPassword } = await import('./auth');
+      const hashedPassword = await hashPassword(newPassword);
+      
+      // Update password
+      await storage.updateUser(userId, { password: hashedPassword });
+      
+      res.json({ message: "Password updated successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
