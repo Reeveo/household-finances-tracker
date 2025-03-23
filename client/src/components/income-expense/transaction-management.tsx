@@ -195,7 +195,7 @@ const transactionSchema = z.object({
   category: z.string().min(1, { message: "Category is required" }),
   subcategory: z.string().min(1, { message: "Subcategory is required" }),
   paymentMethod: z.string().optional(),
-  recurring: z.boolean().default(false),
+  isRecurring: z.boolean().default(false),
   frequency: z.string().optional(),
   budgetMonth: z.string().min(1, { message: "Budget month is required" }),
   notes: z.string().optional(),
@@ -213,7 +213,7 @@ type Transaction = {
   subcategory: string;
   amount: number;
   paymentMethod: string;
-  recurring: boolean;
+  isRecurring: boolean;
   frequency?: string;
   budgetMonth: string;
   notes: string;
@@ -237,7 +237,7 @@ export function TransactionManagement() {
       category: "",
       subcategory: "",
       paymentMethod: "Debit Card",
-      recurring: false,
+      isRecurring: false,
       budgetMonth: "current",
       notes: "",
     }
@@ -263,7 +263,7 @@ export function TransactionManagement() {
       category: transaction.category,
       subcategory: transaction.subcategory,
       paymentMethod: transaction.paymentMethod,
-      recurring: transaction.recurring,
+      isRecurring: transaction.isRecurring,
       frequency: transaction.frequency,
       budgetMonth: transaction.budgetMonth,
       notes: transaction.notes,
@@ -291,8 +291,8 @@ export function TransactionManagement() {
               category: data.category,
               subcategory: data.subcategory,
               paymentMethod: data.paymentMethod || 'Debit Card',
-              recurring: data.recurring,
-              frequency: data.recurring ? data.frequency : undefined,
+              isRecurring: data.isRecurring,
+              frequency: data.isRecurring ? data.frequency : undefined,
               budgetMonth: data.budgetMonth,
               notes: data.notes || '',
             } 
@@ -310,8 +310,8 @@ export function TransactionManagement() {
         category: data.category,
         subcategory: data.subcategory,
         paymentMethod: data.paymentMethod || 'Debit Card',
-        recurring: data.recurring,
-        frequency: data.recurring ? data.frequency : undefined,
+        isRecurring: data.isRecurring,
+        frequency: data.isRecurring ? data.frequency : undefined,
         merchantLogo: '',
         budgetMonth: data.budgetMonth,
         notes: data.notes || '',
@@ -722,7 +722,7 @@ export function TransactionManagement() {
               {/* Recurring Transaction Options */}
               <FormField
                 control={form.control}
-                name="recurring"
+                name="isRecurring"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                     <FormControl>
@@ -741,7 +741,7 @@ export function TransactionManagement() {
                 )}
               />
 
-              {form.watch('recurring') && (
+              {form.watch('isRecurring') && (
                 <FormField
                   control={form.control}
                   name="frequency"
