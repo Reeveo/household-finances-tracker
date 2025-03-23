@@ -401,10 +401,10 @@ export function TransactionManagement() {
         <CardTitle className="text-xl font-bold">Transaction Management</CardTitle>
         <Button
           onClick={() => handleDialogChange(true)}
-          className={`flex items-center ${isMobile ? 'fixed bottom-6 right-6 z-50 rounded-full shadow-lg w-12 h-12 p-0 justify-center' : ''}`}
-          size={isMobile ? "icon" : "default"}
+          className={`flex items-center ${isMobileState ? 'fixed bottom-6 right-6 z-50 rounded-full shadow-lg w-12 h-12 p-0 justify-center' : ''}`}
+          size={isMobileState ? "icon" : "default"}
         >
-          {isMobile ? (
+          {isMobileState ? (
             <Plus className="h-6 w-6" />
           ) : (
             <>
