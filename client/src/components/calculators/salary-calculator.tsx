@@ -585,24 +585,24 @@ export function SalaryCalculator() {
   
   return (
     <Card className="shadow-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center">
+      <CardHeader className="px-4 py-4 sm:px-6">
+        <CardTitle className="flex items-center text-lg sm:text-xl">
           <Calculator className="mr-2 h-5 w-5" />
           UK Salary Calculator
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs sm:text-sm">
           Calculate take-home pay with the latest {selectedTaxYear} tax rates and thresholds
         </CardDescription>
       </CardHeader>
-      <CardContent className="p-5">
+      <CardContent className="p-3 sm:p-5">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="single">Single Salary</TabsTrigger>
-            <TabsTrigger value="compare">Compare Salaries</TabsTrigger>
+          <TabsList className="mb-4 w-full grid grid-cols-2">
+            <TabsTrigger value="single" className="text-xs sm:text-sm">Single Salary</TabsTrigger>
+            <TabsTrigger value="compare" className="text-xs sm:text-sm">Compare Salaries</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="single" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <TabsContent value="single" className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Input Section */}
               <div className="space-y-4">
                 {/* Tax Year Selection */}
@@ -905,17 +905,17 @@ export function SalaryCalculator() {
               {/* Results Section */}
               {salaryResult && (
                 <div className="space-y-4">
-                  {/* Period and Annual Summary Cards */}
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Period and Annual Summary Cards - Mobile Optimized */}
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
-                      <CardContent className="p-4">
-                        <h3 className="text-sm font-medium text-gray-600">
+                      <CardContent className="p-3 sm:p-4">
+                        <h3 className="text-xs sm:text-sm font-medium text-gray-600">
                           {salary.salaryFrequency === "monthly" ? "Monthly" : 
                            salary.salaryFrequency === "weekly" ? "Weekly" :
                            salary.salaryFrequency === "fourWeekly" ? "Four-Weekly" :
                            salary.salaryFrequency === "daily" ? "Daily" : "Hourly"} Take-Home
                         </h3>
-                        <div className="text-3xl font-bold mt-1 text-blue-700">{formatCurrency(salaryResult.periodTakeHome)}</div>
+                        <div className="text-xl sm:text-2xl md:text-3xl font-bold mt-1 text-blue-700">{formatCurrency(salaryResult.periodTakeHome)}</div>
                         <p className="text-xs text-gray-500 mt-1">
                           {formatPercentage(salaryResult.effectiveTaxRate)} effective tax rate
                         </p>
@@ -923,9 +923,9 @@ export function SalaryCalculator() {
                     </Card>
                     
                     <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100">
-                      <CardContent className="p-4">
-                        <h3 className="text-sm font-medium text-gray-600">Annual Take-Home</h3>
-                        <div className="text-3xl font-bold mt-1 text-emerald-700">{formatCurrency(salaryResult.annualTakeHome)}</div>
+                      <CardContent className="p-3 sm:p-4">
+                        <h3 className="text-xs sm:text-sm font-medium text-gray-600">Annual Take-Home</h3>
+                        <div className="text-xl sm:text-2xl md:text-3xl font-bold mt-1 text-emerald-700">{formatCurrency(salaryResult.annualTakeHome)}</div>
                         <p className="text-xs text-gray-500 mt-1">
                           {formatCurrency(salaryResult.annualGross)} gross per year
                         </p>
@@ -933,72 +933,72 @@ export function SalaryCalculator() {
                     </Card>
                   </div>
                   
-                  {/* Breakdown Card */}
+                  {/* Breakdown Card - Mobile Optimized */}
                   <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg flex items-center">
-                        <PoundSterling className="mr-2 h-5 w-5" />
+                    <CardHeader className="p-3 pb-2 sm:p-4 sm:pb-2">
+                      <CardTitle className="text-base sm:text-lg flex items-center">
+                        <PoundSterling className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                         Salary Breakdown
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-4">
+                    <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+                      <div className="space-y-3 sm:space-y-4">
                         {/* Salary and Tax Summary */}
                         <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-xs sm:text-sm">
                             <span>Gross Salary:</span>
                             <span className="font-medium">{formatCurrency(salaryResult.annualGross)}</span>
                           </div>
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-xs sm:text-sm">
                             <span>Taxable Pay:</span>
                             <span className="font-medium">{formatCurrency(salaryResult.annualTaxable)}</span>
                           </div>
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-xs sm:text-sm">
                             <span>Income Tax:</span>
                             <span className="font-medium text-red-600">-{formatCurrency(salaryResult.incomeTax.total)}</span>
                           </div>
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-xs sm:text-sm">
                             <span>National Insurance:</span>
                             <span className="font-medium text-red-600">-{formatCurrency(salaryResult.nationalInsurance.total)}</span>
                           </div>
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-xs sm:text-sm">
                             <span>Pension Contribution:</span>
                             <span className="font-medium text-blue-600">-{formatCurrency(salaryResult.pension.annualContribution)}</span>
                           </div>
                           
                           {/* Student Loan Section */}
                           {salaryResult.studentLoan && (
-                            <div className="flex justify-between text-sm">
-                              <span>Student Loan ({salaryResult.studentLoan.plan}):</span>
+                            <div className="flex justify-between text-xs sm:text-sm">
+                              <span>Student Loan {salaryResult.studentLoan.plan && `(Plan ${salaryResult.studentLoan.plan})`}:</span>
                               <span className="font-medium text-red-600">-{formatCurrency(salaryResult.studentLoan.amount)}</span>
                             </div>
                           )}
                           
                           {salaryResult.postgraduateLoan && (
-                            <div className="flex justify-between text-sm">
-                              <span>Postgraduate Loan:</span>
+                            <div className="flex justify-between text-xs sm:text-sm">
+                              <span>Postgrad Loan:</span>
                               <span className="font-medium text-red-600">-{formatCurrency(salaryResult.postgraduateLoan.amount)}</span>
                             </div>
                           )}
                           
                           {/* Only show deductions if they exist */}
                           {salary.postDeductions > 0 && (
-                            <div className="flex justify-between text-sm">
+                            <div className="flex justify-between text-xs sm:text-sm">
                               <span>Post-Tax Deductions:</span>
                               <span className="font-medium text-red-600">-{formatCurrency(salary.postDeductions)}</span>
                             </div>
                           )}
                           
                           <Separator />
-                          <div className="flex justify-between font-semibold">
+                          <div className="flex justify-between font-semibold text-xs sm:text-sm">
                             <span>Annual Take-Home Pay:</span>
                             <span className="text-emerald-700">{formatCurrency(salaryResult.annualTakeHome)}</span>
                           </div>
                         </div>
                         
                         {/* Visualization of Split */}
-                        <div className="space-y-2">
-                          <h3 className="text-sm font-medium">How Your Salary is Split</h3>
+                        <div className="space-y-2 mt-2">
+                          <h3 className="text-xs sm:text-sm font-medium">How Your Salary is Split</h3>
                           <div className="space-y-1">
                             <div className="flex justify-between text-xs">
                               <span>Take-Home Pay</span>
@@ -1056,40 +1056,43 @@ export function SalaryCalculator() {
                         </div>
                       </div>
                     </CardContent>
-                    <CardFooter className="pt-0 border-t flex justify-between">
-                      <div>
-                        <Badge variant="outline" className="mr-2">
+                    <CardFooter className="p-3 pt-0 sm:p-4 sm:pt-0 border-t flex flex-col sm:flex-row sm:justify-between gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline" className="text-xs">
                           {salary.taxYear}
                         </Badge>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-xs">
                           Tax Code: {salary.taxCode}
                         </Badge>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 w-full sm:w-auto">
                         <Button
                           onClick={saveForComparison}
                           variant="outline"
                           size="sm"
-                          className="text-xs"
+                          className="text-xs flex-1 sm:flex-initial"
                         >
-                          <Copy className="h-3.5 w-3.5 mr-1" />
-                          Save for Comparison
+                          <Copy className="h-3 w-3 mr-1 sm:h-3.5 sm:w-3.5" />
+                          <span className="sm:hidden">Compare</span>
+                          <span className="hidden sm:inline">Save for Comparison</span>
                         </Button>
                         <Button
                           onClick={() => setShowDetails(!showDetails)}
                           variant="outline"
                           size="sm"
-                          className="text-xs"
+                          className="text-xs flex-1 sm:flex-initial"
                         >
                           {showDetails ? (
                             <>
-                              <ChevronUp className="h-3.5 w-3.5 mr-1" />
-                              Hide Details
+                              <ChevronUp className="h-3 w-3 mr-1 sm:h-3.5 sm:w-3.5" />
+                              <span className="sm:hidden">Hide</span>
+                              <span className="hidden sm:inline">Hide Details</span>
                             </>
                           ) : (
                             <>
-                              <ChevronDown className="h-3.5 w-3.5 mr-1" />
-                              Show Details
+                              <ChevronDown className="h-3 w-3 mr-1 sm:h-3.5 sm:w-3.5" />
+                              <span className="sm:hidden">Details</span>
+                              <span className="hidden sm:inline">Show Details</span>
                             </>
                           )}
                         </Button>
@@ -1097,52 +1100,52 @@ export function SalaryCalculator() {
                     </CardFooter>
                   </Card>
                   
-                  {/* Detailed Tax Breakdown */}
+                  {/* Detailed Tax Breakdown - Mobile Optimized */}
                   {showDetails && (
                     <div className="space-y-4">
                       {/* Income Tax Breakdown */}
                       <Card>
-                        <CardHeader className="p-4 pb-2">
-                          <CardTitle className="text-base">Income Tax Breakdown</CardTitle>
+                        <CardHeader className="p-3 pb-2 sm:p-4 sm:pb-2">
+                          <CardTitle className="text-sm sm:text-base">Income Tax Breakdown</CardTitle>
                         </CardHeader>
-                        <CardContent className="p-4 pt-2">
-                          <Table>
+                        <CardContent className="p-3 pt-1 sm:p-4 sm:pt-2 overflow-x-auto">
+                          <Table className="text-xs sm:text-sm whitespace-nowrap">
                             <TableHeader>
                               <TableRow>
-                                <TableHead>Band</TableHead>
-                                <TableHead>Taxable Amount</TableHead>
-                                <TableHead>Tax Rate</TableHead>
-                                <TableHead className="text-right">Tax Paid</TableHead>
+                                <TableHead className="px-2 py-1 sm:px-4 sm:py-2">Band</TableHead>
+                                <TableHead className="px-2 py-1 sm:px-4 sm:py-2">Amount</TableHead>
+                                <TableHead className="px-2 py-1 sm:px-4 sm:py-2">Rate</TableHead>
+                                <TableHead className="px-2 py-1 sm:px-4 sm:py-2 text-right">Tax</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               <TableRow>
-                                <TableCell className="font-medium">Personal Allowance</TableCell>
-                                <TableCell>{formatCurrency(salaryResult.incomeTax.personalAllowance)}</TableCell>
-                                <TableCell>0%</TableCell>
-                                <TableCell className="text-right">£0.00</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 font-medium">PA</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">{formatCurrency(salaryResult.incomeTax.personalAllowance)}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">0%</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 text-right">£0.00</TableCell>
                               </TableRow>
                               <TableRow>
-                                <TableCell className="font-medium">Basic Rate</TableCell>
-                                <TableCell>{formatCurrency(salaryResult.incomeTax.basicRate.amount)}</TableCell>
-                                <TableCell>20%</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.incomeTax.basicRate.tax)}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 font-medium">Basic</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">{formatCurrency(salaryResult.incomeTax.basicRate.amount)}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">20%</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 text-right">{formatCurrency(salaryResult.incomeTax.basicRate.tax)}</TableCell>
                               </TableRow>
                               <TableRow>
-                                <TableCell className="font-medium">Higher Rate</TableCell>
-                                <TableCell>{formatCurrency(salaryResult.incomeTax.higherRate.amount)}</TableCell>
-                                <TableCell>40%</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.incomeTax.higherRate.tax)}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 font-medium">Higher</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">{formatCurrency(salaryResult.incomeTax.higherRate.amount)}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">40%</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 text-right">{formatCurrency(salaryResult.incomeTax.higherRate.tax)}</TableCell>
                               </TableRow>
                               <TableRow>
-                                <TableCell className="font-medium">Additional Rate</TableCell>
-                                <TableCell>{formatCurrency(salaryResult.incomeTax.additionalRate.amount)}</TableCell>
-                                <TableCell>45%</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.incomeTax.additionalRate.tax)}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 font-medium">Additional</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">{formatCurrency(salaryResult.incomeTax.additionalRate.amount)}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">45%</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 text-right">{formatCurrency(salaryResult.incomeTax.additionalRate.tax)}</TableCell>
                               </TableRow>
-                              <TableRow>
-                                <TableCell className="font-medium" colSpan={3}>Total Income Tax</TableCell>
-                                <TableCell className="text-right font-semibold">{formatCurrency(salaryResult.incomeTax.total)}</TableCell>
+                              <TableRow className="bg-slate-50">
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 font-medium" colSpan={3}>Total Income Tax</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 text-right font-semibold">{formatCurrency(salaryResult.incomeTax.total)}</TableCell>
                               </TableRow>
                             </TableBody>
                           </Table>
@@ -1151,111 +1154,118 @@ export function SalaryCalculator() {
                       
                       {/* National Insurance Breakdown */}
                       <Card>
-                        <CardHeader className="p-4 pb-2">
-                          <CardTitle className="text-base">National Insurance Breakdown</CardTitle>
+                        <CardHeader className="p-3 pb-2 sm:p-4 sm:pb-2">
+                          <CardTitle className="text-sm sm:text-base">National Insurance</CardTitle>
                         </CardHeader>
-                        <CardContent className="p-4 pt-2">
-                          <Table>
+                        <CardContent className="p-3 pt-1 sm:p-4 sm:pt-2 overflow-x-auto">
+                          <Table className="text-xs sm:text-sm whitespace-nowrap">
                             <TableHeader>
                               <TableRow>
-                                <TableHead>Band</TableHead>
-                                <TableHead>Amount</TableHead>
-                                <TableHead>Rate</TableHead>
-                                <TableHead className="text-right">Contribution</TableHead>
+                                <TableHead className="px-2 py-1 sm:px-4 sm:py-2">Band</TableHead>
+                                <TableHead className="px-2 py-1 sm:px-4 sm:py-2">Amount</TableHead>
+                                <TableHead className="px-2 py-1 sm:px-4 sm:py-2">Rate</TableHead>
+                                <TableHead className="px-2 py-1 sm:px-4 sm:py-2 text-right">Contrib.</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               <TableRow>
-                                <TableCell className="font-medium">Between PT and UEL</TableCell>
-                                <TableCell>{formatCurrency(salaryResult.nationalInsurance.primaryThreshold.amount)}</TableCell>
-                                <TableCell>{salary.taxYear === TaxYear.Y2024_2025 ? '10%' : '12%'}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.nationalInsurance.primaryThreshold.contribution)}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 font-medium">PT to UEL</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">{formatCurrency(salaryResult.nationalInsurance.primaryThreshold.amount)}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">{salary.taxYear === TaxYear.Y2024_2025 ? '10%' : '12%'}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 text-right">{formatCurrency(salaryResult.nationalInsurance.primaryThreshold.contribution)}</TableCell>
                               </TableRow>
                               <TableRow>
-                                <TableCell className="font-medium">Above UEL</TableCell>
-                                <TableCell>{formatCurrency(salaryResult.nationalInsurance.upperEarningsLimit.amount)}</TableCell>
-                                <TableCell>2%</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.nationalInsurance.upperEarningsLimit.contribution)}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 font-medium">Above UEL</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">{formatCurrency(salaryResult.nationalInsurance.upperEarningsLimit.amount)}</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2">2%</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 text-right">{formatCurrency(salaryResult.nationalInsurance.upperEarningsLimit.contribution)}</TableCell>
                               </TableRow>
-                              <TableRow>
-                                <TableCell className="font-medium" colSpan={3}>Total National Insurance</TableCell>
-                                <TableCell className="text-right font-semibold">{formatCurrency(salaryResult.nationalInsurance.total)}</TableCell>
+                              <TableRow className="bg-slate-50">
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 font-medium" colSpan={3}>Total NI</TableCell>
+                                <TableCell className="px-2 py-1 sm:px-4 sm:py-2 text-right font-semibold">{formatCurrency(salaryResult.nationalInsurance.total)}</TableCell>
                               </TableRow>
                             </TableBody>
                           </Table>
                         </CardContent>
                       </Card>
                       
-                      {/* Additional Tax Info */}
-                      <div className="grid grid-cols-3 gap-4">
+                      {/* Additional Tax Info - Mobile Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                         <Card>
-                          <CardContent className="p-4">
-                            <h3 className="text-sm font-medium text-gray-500">Marginal Tax Rate</h3>
-                            <div className="text-xl font-bold mt-1">{formatPercentage(salaryResult.marginalTaxRate)}</div>
+                          <CardContent className="p-3 sm:p-4">
+                            <h3 className="text-xs sm:text-sm font-medium text-gray-500">Marginal Tax Rate</h3>
+                            <div className="text-lg sm:text-xl font-bold mt-1">{formatPercentage(salaryResult.marginalTaxRate)}</div>
                             <p className="text-xs text-gray-500 mt-1">
-                              Tax rate on your next pound earned
+                              Tax on next £1 earned
                             </p>
                           </CardContent>
                         </Card>
                         <Card>
-                          <CardContent className="p-4">
-                            <h3 className="text-sm font-medium text-gray-500">Effective Tax Rate</h3>
-                            <div className="text-xl font-bold mt-1">{formatPercentage(salaryResult.effectiveTaxRate)}</div>
+                          <CardContent className="p-3 sm:p-4">
+                            <h3 className="text-xs sm:text-sm font-medium text-gray-500">Effective Tax Rate</h3>
+                            <div className="text-lg sm:text-xl font-bold mt-1">{formatPercentage(salaryResult.effectiveTaxRate)}</div>
                             <p className="text-xs text-gray-500 mt-1">
-                              Overall tax rate on your income
+                              Overall tax rate
                             </p>
                           </CardContent>
                         </Card>
                         <Card>
-                          <CardContent className="p-4">
-                            <h3 className="text-sm font-medium text-gray-500">Pension Contribution</h3>
-                            <div className="text-xl font-bold mt-1">{formatCurrency(salaryResult.pension.periodContribution)} / period</div>
+                          <CardContent className="p-3 sm:p-4">
+                            <h3 className="text-xs sm:text-sm font-medium text-gray-500">Pension Contribution</h3>
+                            <div className="text-lg sm:text-xl font-bold mt-1">{formatCurrency(salaryResult.pension.periodContribution)}</div>
                             <p className="text-xs text-gray-500 mt-1">
-                              {formatCurrency(salaryResult.pension.annualContribution)} annually
+                              per {salary.salaryFrequency === "monthly" ? "month" : 
+                                   salary.salaryFrequency === "weekly" ? "week" :
+                                   salary.salaryFrequency === "fourWeekly" ? "4 weeks" :
+                                   salary.salaryFrequency === "daily" ? "day" : "hour"}
                             </p>
                           </CardContent>
                         </Card>
                       </div>
                       
-                      {/* Student Loan Info */}
+                      {/* Student Loan Info - Mobile Optimized */}
                       {(salaryResult.studentLoan || salaryResult.postgraduateLoan) && (
                         <Card>
-                          <CardHeader className="p-4 pb-2">
-                            <CardTitle className="text-base">Student Loan Repayments</CardTitle>
+                          <CardHeader className="p-3 pb-2 sm:p-4 sm:pb-2">
+                            <CardTitle className="text-sm sm:text-base">Student Loan Repayments</CardTitle>
                           </CardHeader>
-                          <CardContent className="p-4 pt-2">
-                            <Table>
+                          <CardContent className="p-3 pt-1 sm:p-4 sm:pt-2 overflow-x-auto">
+                            <Table className="text-xs sm:text-sm whitespace-nowrap">
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead>Type</TableHead>
-                                  <TableHead>Threshold</TableHead>
-                                  <TableHead>Rate</TableHead>
-                                  <TableHead className="text-right">Annual Repayment</TableHead>
+                                  <TableHead className="px-2 py-1 sm:px-4 sm:py-2">Type</TableHead>
+                                  <TableHead className="px-2 py-1 sm:px-4 sm:py-2">Threshold</TableHead>
+                                  <TableHead className="px-2 py-1 sm:px-4 sm:py-2">Rate</TableHead>
+                                  <TableHead className="px-2 py-1 sm:px-4 sm:py-2 text-right">Repayment</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {salaryResult.studentLoan && (
                                   <TableRow>
-                                    <TableCell className="font-medium">Plan {salaryResult.studentLoan.plan}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="px-2 py-1 sm:px-4 sm:py-2 font-medium">Plan {salaryResult.studentLoan.plan}</TableCell>
+                                    <TableCell className="px-2 py-1 sm:px-4 sm:py-2">
                                       {formatCurrency(STUDENT_LOAN_TYPES.find(loan => loan.value === salaryResult.studentLoan?.plan)?.threshold || 0)}
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="px-2 py-1 sm:px-4 sm:py-2">
                                       {formatPercentage(STUDENT_LOAN_TYPES.find(loan => loan.value === salaryResult.studentLoan?.plan)?.rate || 0)}
                                     </TableCell>
-                                    <TableCell className="text-right">{formatCurrency(salaryResult.studentLoan.amount)}</TableCell>
+                                    <TableCell className="px-2 py-1 sm:px-4 sm:py-2 text-right">
+                                      {formatCurrency(salaryResult.studentLoan.amount)}
+                                    </TableCell>
                                   </TableRow>
                                 )}
                                 {salaryResult.postgraduateLoan && (
                                   <TableRow>
-                                    <TableCell className="font-medium">Postgraduate Loan</TableCell>
-                                    <TableCell>
+                                    <TableCell className="px-2 py-1 sm:px-4 sm:py-2 font-medium">Postgrad Loan</TableCell>
+                                    <TableCell className="px-2 py-1 sm:px-4 sm:py-2">
                                       {formatCurrency(STUDENT_LOAN_TYPES.find(loan => loan.value === 'postgrad')?.threshold || 0)}
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="px-2 py-1 sm:px-4 sm:py-2">
                                       {formatPercentage(STUDENT_LOAN_TYPES.find(loan => loan.value === 'postgrad')?.rate || 0)}
                                     </TableCell>
-                                    <TableCell className="text-right">{formatCurrency(salaryResult.postgraduateLoan.amount)}</TableCell>
+                                    <TableCell className="px-2 py-1 sm:px-4 sm:py-2 text-right">
+                                      {formatCurrency(salaryResult.postgraduateLoan.amount)}
+                                    </TableCell>
                                   </TableRow>
                                 )}
                               </TableBody>
