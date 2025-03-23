@@ -6,6 +6,7 @@ import {
   CardTitle,
   CardFooter
 } from "@/components/ui/card";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -392,7 +393,7 @@ export function TransactionManagement() {
   }, [localTransactions, searchQuery, categoryFilter, monthFilter]);
 
   // Get isMobile from useIsMobile hook
-  const { isMobile } = useIsMobile ? useIsMobile() : { isMobile: false };
+  const isMobileState = useIsMobile();
 
   return (
     <Card className="shadow-sm relative">

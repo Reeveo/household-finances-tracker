@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Transaction } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Card, 
   CardContent, 
@@ -392,7 +393,7 @@ export function CategoryManagement() {
     setEditedSubcategory(SUB_CATEGORIES[category][0]);
   };
 
-  const { isMobile } = useIsMobile ? useIsMobile() : { isMobile: false };
+  const isMobile = useIsMobile();
 
   return (
     <Card className="w-full">
