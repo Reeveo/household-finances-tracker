@@ -478,7 +478,12 @@ export function BudgetTracking() {
               <span className="text-sm text-muted-foreground">
                 Total: £{categoryTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0).toFixed(2)}
               </span>
-              <Button variant="outline" size="sm" onClick={() => setShowTransactionsDialog(false)}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-9 text-sm px-4 font-medium"
+                onClick={() => setShowTransactionsDialog(false)}
+              >
                 Close
               </Button>
             </div>

@@ -27,19 +27,22 @@ export default function IncomeExpensePage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <h1 className="text-2xl font-bold tracking-tight">Income & Expense Tracker</h1>
             <Link href="/transaction-analytics">
-              <Button variant="outline" className="gap-2 hover:bg-muted">
-                <BarChart className="h-4 w-4" />
-                <span>Advanced Analytics</span>
+              <Button 
+                variant="outline" 
+                className="gap-2 hover:bg-muted h-10 text-sm sm:text-base py-2 px-3 sm:py-2 sm:px-4 w-full sm:w-auto"
+              >
+                <BarChart className="h-4 w-4 flex-shrink-0" />
+                <span className="whitespace-nowrap">Advanced Analytics</span>
               </Button>
             </Link>
           </div>
           
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-4">
-              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-              <TabsTrigger value="transactions">Transactions</TabsTrigger>
-              <TabsTrigger value="categories">Categories</TabsTrigger>
-              <TabsTrigger value="import">Import</TabsTrigger>
+            <TabsList className="grid w-full max-w-md grid-cols-4 text-xs sm:text-sm">
+              <TabsTrigger value="dashboard" className="px-1 sm:px-3 py-1.5 h-9 sm:h-10">Dashboard</TabsTrigger>
+              <TabsTrigger value="transactions" className="px-1 sm:px-3 py-1.5 h-9 sm:h-10">Transactions</TabsTrigger>
+              <TabsTrigger value="categories" className="px-1 sm:px-3 py-1.5 h-9 sm:h-10">Categories</TabsTrigger>
+              <TabsTrigger value="import" className="px-1 sm:px-3 py-1.5 h-9 sm:h-10">Import</TabsTrigger>
             </TabsList>
             
             <TabsContent value="dashboard" className="mt-6 space-y-6">
