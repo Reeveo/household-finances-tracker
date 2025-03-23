@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth } from "./auth";
+import { setupAuth, comparePasswords, hashPassword } from "./auth";
 import { z } from "zod";
 import { 
   insertIncomeSchema, 
@@ -1004,7 +1004,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Verify current password
-      const { comparePasswords } = await import('./auth');
       const isMatch = await comparePasswords(currentPassword, user.password);
       
       if (!isMatch) {
@@ -1012,7 +1011,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Hash new password
-      const { hashPassword } = await import('./auth');
       const hashedPassword = await hashPassword(newPassword);
       
       // Update password
