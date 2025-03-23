@@ -392,36 +392,41 @@ export function CategoryManagement() {
     setEditedSubcategory(SUB_CATEGORIES[category][0]);
   };
 
+  const { isMobile } = useIsMobile ? useIsMobile() : { isMobile: false };
+
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+      <CardHeader className="space-y-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Tag className="h-5 w-5" />
-            <span>Category Management</span>
+            <span className="font-bold">Category Management</span>
           </div>
           <Tabs 
             value={activeTab} 
             onValueChange={setActiveTab} 
-            className="ml-auto"
+            className="w-full sm:w-auto"
           >
-            <TabsList>
-              <TabsTrigger value="transactions" className="flex items-center gap-1">
-                <Box className="h-4 w-4" />
-                <span>Transactions</span>
+            <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+              <TabsTrigger value="transactions" className="flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm">
+                <Box className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Transactions</span>
+                <span className="sm:hidden">Trans</span>
               </TabsTrigger>
-              <TabsTrigger value="rules" className="flex items-center gap-1">
-                <Layers className="h-4 w-4" />
-                <span>Merchant Rules</span>
+              <TabsTrigger value="rules" className="flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm">
+                <Layers className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Merchant Rules</span>
+                <span className="sm:hidden">Rules</span>
               </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex items-center gap-1">
-                <BarChart3 className="h-4 w-4" />
-                <span>Analytics</span>
+              <TabsTrigger value="analytics" className="flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm">
+                <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Analytics</span>
+                <span className="sm:hidden">Stats</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
-        </CardTitle>
-        <CardDescription>
+        </div>
+        <CardDescription className="text-xs sm:text-sm">
           {activeTab === "transactions" && "Review and edit categories for your transactions"}
           {activeTab === "rules" && "Manage categorization rules for merchants and recurring transactions"}
           {activeTab === "analytics" && "See insights on your categorization effectiveness"}

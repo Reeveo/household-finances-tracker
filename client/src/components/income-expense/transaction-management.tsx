@@ -391,20 +391,30 @@ export function TransactionManagement() {
     });
   }, [localTransactions, searchQuery, categoryFilter, monthFilter]);
 
+  // Get isMobile from useIsMobile hook
+  const { isMobile } = useIsMobile ? useIsMobile() : { isMobile: false };
+
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <Card className="shadow-sm relative">
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
         <CardTitle className="text-xl font-bold">Transaction Management</CardTitle>
         <Button
           onClick={() => handleDialogChange(true)}
-          className="flex items-center"
+          className={`flex items-center ${isMobile ? 'fixed bottom-6 right-6 z-50 rounded-full shadow-lg w-12 h-12 p-0 justify-center' : ''}`}
+          size={isMobile ? "icon" : "default"}
         >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Transaction
+          {isMobile ? (
+            <Plus className="h-6 w-6" />
+          ) : (
+            <>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Transaction
+            </>
+          )}
         </Button>
       </CardHeader>
       
-      <CardContent className="p-5">
+      <CardContent className="p-3 sm:p-5">
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <div className="relative flex-1 w-full sm:w-auto sm:max-w-md">
