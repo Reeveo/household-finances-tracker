@@ -352,10 +352,10 @@ export function BudgetTracking() {
               <Button 
                 variant="link" 
                 size="sm" 
-                className="mt-2 px-0 h-auto text-xs"
+                className="mt-2 px-0 h-auto text-xs font-medium"
                 onClick={() => handleShowTransactions(item.category)}
               >
-                View transactions <ArrowRight className="ml-1 h-3 w-3" />
+                <span className="text-primary">View transactions</span> <ArrowRight className="ml-1 h-3 w-3 flex-shrink-0" />
               </Button>
             </div>
           ))}
@@ -364,19 +364,26 @@ export function BudgetTracking() {
         <div className="mt-6 flex flex-col sm:flex-row justify-between gap-2">
           <Button 
             variant="outline"
+            className="h-10 text-sm sm:text-base py-2 px-3 sm:py-2 sm:px-4"
             onClick={() => setIsModalOpen(true)}
           >
-            <Edit className="h-4 w-4 mr-2" />
-            Adjust Budget
+            <Edit className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="whitespace-nowrap">Adjust Budget</span>
           </Button>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <Calendar className="h-4 w-4 mr-2" />
-              Future Planning
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+            <Button 
+              variant="outline"
+              className="h-10 text-sm sm:text-base py-2 px-3 sm:py-2 sm:px-4"
+            >
+              <Calendar className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+              <span className="whitespace-nowrap">Future Planning</span>
             </Button>
-            <Button variant="default">
-              <FileText className="h-4 w-4 mr-2" />
-              Generate Report
+            <Button 
+              variant="default"
+              className="h-10 text-sm sm:text-base py-2 px-3 sm:py-2 sm:px-4"
+            >
+              <FileText className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+              <span className="whitespace-nowrap">Generate Report</span>
             </Button>
           </div>
         </div>

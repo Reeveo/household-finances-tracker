@@ -118,11 +118,11 @@ export function IncomeSourcesChart() {
         <div className="mt-4">
           <Button 
             variant="default" 
-            className="w-full"
+            className="w-full h-10 text-sm sm:text-base py-2 px-3 sm:py-2 sm:px-4"
             onClick={() => setIsModalOpen(true)}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Income
+            <Plus className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+            <span className="whitespace-nowrap">Add Income</span>
           </Button>
         </div>
 
