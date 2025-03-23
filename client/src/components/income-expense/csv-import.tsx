@@ -820,24 +820,74 @@ export function CSVImport() {
   };
   
   // Confirm and complete the import
-  const confirmImport = () => {
-    // Here you would call your API to save the transactions
-    // For now, let's just simulate the import
-    const validTransactions = csvData.filter(t => t.isValid && !t.isDuplicate);
-    
-    toast({
-      title: "Import successful",
-      description: `${validTransactions.length} transactions have been imported.`,
-      variant: "default"
-    });
-    
-    // Reset state
-    setConfirmDialogOpen(false);
-    setCurrentStep('upload');
-    setCsvFile(null);
-    setRawCsvLines([]);
-    setCsvColumns([]);
-    setCsvData([]);
+  const confirmImport = async () => {
+    try {
+      // Filter out invalid and duplicate transactions
+      const validTransactions = csvData.filter(t => t.isValid && !t.isDuplicate);
+      
+      if (validTransactions.length === 0) {
+        toast({
+          title: "No valid transactions",
+          description: "No valid transactions found to import.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Transform transactions to match API schema
+      const formattedTransactions = validTransactions.map(transaction => ({
+        date: transaction.transactionDate,
+        description: transaction.description,
+        amount: transaction.amount.toString(),
+        category: transaction.category,
+        subcategory: transaction.subcategory,
+        type: transaction.type || "bank-transaction",
+        balance: transaction.balance ? transaction.balance.toString() : null,
+        reference: transaction.reference || null,
+        budgetMonth: transaction.budgetMonth || null,
+        isRecurring: false,
+        paymentMethod: "bank",
+        notes: null,
+        importHash: transaction.id // Use the transaction ID as import hash to prevent duplicates
+      }));
+      
+      // Call API to save transactions in batch
+      const response = await fetch('/api/transactions/batch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ transactions: formattedTransactions }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to import transactions');
+      }
+      
+      const result = await response.json();
+      
+      toast({
+        title: "Import successful",
+        description: `${result.stats.created} transactions have been imported.${result.stats.skipped > 0 ? ` ${result.stats.skipped} transactions were skipped.` : ''}`,
+        variant: "default"
+      });
+      
+      // Reset state
+      setConfirmDialogOpen(false);
+      setCurrentStep('upload');
+      setCsvFile(null);
+      setRawCsvLines([]);
+      setCsvColumns([]);
+      setCsvData([]);
+    } catch (error) {
+      console.error('Error importing transactions:', error);
+      toast({
+        title: "Import failed",
+        description: error instanceof Error ? error.message : "Failed to import transactions",
+        variant: "destructive"
+      });
+    }
   };
   
   // Cancel import
