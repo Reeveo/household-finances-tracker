@@ -371,5 +371,204 @@ describe('MemStorage', () => {
       expect(transaction!.description).toBe('Imported Transaction');
       expect(transaction!.importHash).toBe(importHash);
     });
+
+    it('creates and retrieves a recurring transaction without end date', async () => {
+      const transactionInput = {
+        userId,
+        date: '2023-06-15',
+        description: 'Monthly Rent',
+        amount: '-1200.00',
+        category: 'Essentials',
+        subcategory: 'Housing',
+        type: 'expense',
+        paymentMethod: 'Bank Transfer',
+        isRecurring: true,
+        frequency: 'monthly', 
+        hasEndDate: false,
+        endDate: null,
+        nextDueDate: '2023-07-15',
+        budgetMonth: 6,
+        budgetYear: 2023,
+        balance: null,
+        reference: null,
+        notes: 'Recurring monthly rent payment',
+        importHash: null
+      };
+      
+      const createdTransaction = await storage.createTransaction(transactionInput);
+      
+      expect(createdTransaction.id).toBeDefined();
+      expect(createdTransaction.isRecurring).toBe(true);
+      expect(createdTransaction.frequency).toBe('monthly');
+      expect(createdTransaction.hasEndDate).toBe(false);
+      expect(createdTransaction.endDate).toBeNull();
+      expect(createdTransaction.nextDueDate).toBe('2023-07-15');
+      
+      // Test getTransactionById for a recurring transaction
+      const retrievedTransaction = await storage.getTransactionById(createdTransaction.id);
+      expect(retrievedTransaction).toEqual(createdTransaction);
+    });
+    
+    it('creates and retrieves a recurring transaction with end date', async () => {
+      const transactionInput = {
+        userId,
+        date: '2023-06-15',
+        description: 'Gym Membership',
+        amount: '-50.00',
+        category: 'Lifestyle',
+        subcategory: 'Fitness',
+        type: 'expense',
+        paymentMethod: 'Credit Card',
+        isRecurring: true,
+        frequency: 'monthly',
+        hasEndDate: true, 
+        endDate: '2023-12-15',
+        nextDueDate: '2023-07-15',
+        budgetMonth: 6,
+        budgetYear: 2023,
+        balance: null,
+        reference: null,
+        notes: 'Monthly gym membership with 6 month commitment',
+        importHash: null
+      };
+      
+      const createdTransaction = await storage.createTransaction(transactionInput);
+      
+      expect(createdTransaction.id).toBeDefined();
+      expect(createdTransaction.isRecurring).toBe(true);
+      expect(createdTransaction.frequency).toBe('monthly');
+      expect(createdTransaction.hasEndDate).toBe(true);
+      expect(createdTransaction.endDate).toBe('2023-12-15');
+      expect(createdTransaction.nextDueDate).toBe('2023-07-15');
+      
+      // Test getTransactionById for a recurring transaction with end date
+      const retrievedTransaction = await storage.getTransactionById(createdTransaction.id);
+      expect(retrievedTransaction).toEqual(createdTransaction);
+    });
+    
+    it('creates multiple recurring transactions in batch', async () => {
+      const transactionInputs = [
+        {
+          userId,
+          date: '2023-06-15',
+          description: 'Netflix Subscription',
+          amount: '-12.99',
+          category: 'Lifestyle',
+          subcategory: 'Entertainment',
+          type: 'expense',
+          paymentMethod: 'Credit Card',
+          isRecurring: true,
+          frequency: 'monthly',
+          hasEndDate: false,
+          endDate: null,
+          nextDueDate: '2023-07-15',
+          budgetMonth: 6,
+          budgetYear: 2023,
+          balance: null,
+          reference: null,
+          notes: null,
+          importHash: 'netflix-hash'
+        },
+        {
+          userId,
+          date: '2023-06-20',
+          description: 'Car Lease',
+          amount: '-350.00',
+          category: 'Essentials',
+          subcategory: 'Transportation',
+          type: 'expense',
+          paymentMethod: 'Bank Transfer',
+          isRecurring: true,
+          frequency: 'monthly',
+          hasEndDate: true,
+          endDate: '2025-06-20',
+          nextDueDate: '2023-07-20',
+          budgetMonth: 6,
+          budgetYear: 2023,
+          balance: null,
+          reference: null,
+          notes: '24-month car lease',
+          importHash: 'car-lease-hash'
+        }
+      ];
+      
+      const createdTransactions = await storage.createManyTransactions(transactionInputs);
+      
+      expect(createdTransactions).toHaveLength(2);
+      expect(createdTransactions[0].description).toBe('Netflix Subscription');
+      expect(createdTransactions[0].isRecurring).toBe(true);
+      expect(createdTransactions[0].hasEndDate).toBe(false);
+      
+      expect(createdTransactions[1].description).toBe('Car Lease');
+      expect(createdTransactions[1].isRecurring).toBe(true);
+      expect(createdTransactions[1].hasEndDate).toBe(true);
+      expect(createdTransactions[1].endDate).toBe('2025-06-20');
+      
+      // Test getTransactions
+      const allTransactions = await storage.getTransactions(userId);
+      expect(allTransactions.length).toBeGreaterThanOrEqual(2);
+      
+      // Verify both transactions exist in the result
+      const netflix = allTransactions.find(t => t.description === 'Netflix Subscription');
+      const carLease = allTransactions.find(t => t.description === 'Car Lease');
+      
+      expect(netflix).toBeDefined();
+      expect(carLease).toBeDefined();
+      expect(netflix!.isRecurring).toBe(true);
+      expect(carLease!.isRecurring).toBe(true);
+      expect(netflix!.hasEndDate).toBe(false);
+      expect(carLease!.hasEndDate).toBe(true);
+      expect(carLease!.endDate).toBe('2025-06-20');
+    });
+    
+    it('updates a recurring transaction', async () => {
+      // Create a recurring transaction first
+      const transaction = await storage.createTransaction({
+        userId,
+        date: '2023-06-15',
+        description: 'Original Subscription',
+        amount: '-10.00',
+        category: 'Lifestyle',
+        subcategory: 'Entertainment',
+        type: 'expense',
+        paymentMethod: 'Credit Card',
+        isRecurring: true,
+        frequency: 'monthly',
+        hasEndDate: false,
+        endDate: null,
+        nextDueDate: '2023-07-15',
+        budgetMonth: 6,
+        budgetYear: 2023,
+        balance: null,
+        reference: null,
+        notes: null,
+        importHash: null
+      });
+      
+      // Update the transaction to have an end date
+      const updatedTransaction = await storage.updateTransaction(transaction.id, {
+        description: 'Updated Subscription',
+        amount: '-15.00',
+        hasEndDate: true,
+        endDate: '2024-06-15',
+        frequency: 'quarterly'
+      });
+      
+      expect(updatedTransaction).toBeDefined();
+      expect(updatedTransaction!.id).toBe(transaction.id);
+      expect(updatedTransaction!.description).toBe('Updated Subscription');
+      expect(updatedTransaction!.amount).toBe('-15.00');
+      expect(updatedTransaction!.isRecurring).toBe(true);
+      expect(updatedTransaction!.frequency).toBe('quarterly');
+      expect(updatedTransaction!.hasEndDate).toBe(true);
+      expect(updatedTransaction!.endDate).toBe('2024-06-15');
+      
+      // Verify the update in storage
+      const retrievedTransaction = await storage.getTransactionById(transaction.id);
+      expect(retrievedTransaction!.description).toBe('Updated Subscription');
+      expect(retrievedTransaction!.frequency).toBe('quarterly');
+      expect(retrievedTransaction!.hasEndDate).toBe(true);
+      expect(retrievedTransaction!.endDate).toBe('2024-06-15');
+    });
   });
 });
