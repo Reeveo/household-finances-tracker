@@ -604,7 +604,7 @@ export function CategoryManagement() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Progress
-                              value={confidence * 100}
+                              value={Number(confidence * 100)}
                               className="h-2 w-16"
                             />
                             <span className="text-xs text-muted-foreground">
@@ -809,13 +809,13 @@ export function CategoryManagement() {
                       of {transactions.length} transactions have high confidence
                     </p>
                     <Progress
-                      value={
+                      value={Number(
                         (transactions.filter(
                           (t) => calculateConfidenceScore(t.description, t.category, t.subcategory || "") > 0.7
                         ).length /
                           transactions.length) *
                         100
-                      }
+                      )}
                       className="h-2 mt-2"
                     />
                   </>
@@ -891,7 +891,7 @@ export function CategoryManagement() {
                         <span className="font-medium">{category}</span>
                         <Badge variant="outline">{count}</Badge>
                       </div>
-                      <Progress value={percentage} className="h-2" />
+                      <Progress value={Number(percentage)} className="h-2" />
                       <div className="mt-1 text-xs text-muted-foreground text-right">
                         {percentage}%
                       </div>
