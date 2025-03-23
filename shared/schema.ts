@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, numeric, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, numeric, timestamp, boolean, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -194,3 +194,47 @@ export type InsertSavingsGoal = z.infer<typeof insertSavingsGoalSchema>;
 
 export type Investment = typeof investments.$inferSelect;
 export type InsertInvestment = z.infer<typeof insertInvestmentSchema>;
+
+// Transactions schema
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  date: date("date").notNull(),
+  description: text("description").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  type: text("type").notNull(), // income, expense
+  category: text("category").notNull(), // Essentials, Lifestyle, Savings, Income
+  subcategory: text("subcategory"),
+  paymentMethod: text("payment_method"),
+  reference: text("reference"),
+  balance: numeric("balance", { precision: 10, scale: 2 }),
+  budgetMonth: integer("budget_month"),
+  budgetYear: integer("budget_year"),
+  isRecurring: boolean("is_recurring").default(false),
+  frequency: text("frequency"), // monthly, weekly, annual
+  notes: text("notes"),
+  importHash: text("import_hash"), // For deduplication
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTransactionSchema = createInsertSchema(transactions).pick({
+  userId: true,
+  date: true,
+  description: true,
+  amount: true,
+  type: true,
+  category: true,
+  subcategory: true,
+  paymentMethod: true,
+  reference: true,
+  balance: true,
+  budgetMonth: true,
+  budgetYear: true,
+  isRecurring: true,
+  frequency: true,
+  notes: true,
+  importHash: true,
+});
+
+export type Transaction = typeof transactions.$inferSelect;
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;

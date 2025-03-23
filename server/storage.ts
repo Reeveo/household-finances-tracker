@@ -6,7 +6,8 @@ import {
   savingsGoals, type SavingsGoal, type InsertSavingsGoal,
   investments, type Investment, type InsertInvestment,
   sharedAccess, type SharedAccess, type InsertSharedAccess,
-  invitations, type Invitation, type InsertInvitation
+  invitations, type Invitation, type InsertInvitation,
+  transactions, type Transaction, type InsertTransaction
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -72,6 +73,18 @@ export interface IStorage {
   updateInvestment(id: number, investment: Partial<InsertInvestment>): Promise<Investment | undefined>;
   deleteInvestment(id: number): Promise<boolean>;
   
+  // Transaction methods
+  getTransactions(userId: number): Promise<Transaction[]>;
+  getTransactionById(id: number): Promise<Transaction | undefined>;
+  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  createManyTransactions(transactions: InsertTransaction[]): Promise<Transaction[]>;
+  updateTransaction(id: number, transaction: Partial<InsertTransaction>): Promise<Transaction | undefined>;
+  deleteTransaction(id: number): Promise<boolean>;
+  getTransactionsByDateRange(userId: number, startDate: Date, endDate: Date): Promise<Transaction[]>;
+  getTransactionsByCategory(userId: number, category: string): Promise<Transaction[]>;
+  getTransactionsByBudgetMonth(userId: number, month: number, year: number): Promise<Transaction[]>;
+  getTransactionByImportHash(importHash: string): Promise<Transaction | undefined>;
+  
   // Session store
   sessionStore: session.Store;
 }
@@ -85,6 +98,7 @@ export class MemStorage implements IStorage {
   private budgets: Map<number, Budget>;
   private savingsGoals: Map<number, SavingsGoal>;
   private investments: Map<number, Investment>;
+  private transactions: Map<number, Transaction>;
   
   sessionStore: session.Store;
   
@@ -96,6 +110,7 @@ export class MemStorage implements IStorage {
   private currentBudgetId: number;
   private currentSavingsGoalId: number;
   private currentInvestmentId: number;
+  private currentTransactionId: number;
 
   constructor() {
     this.users = new Map();
