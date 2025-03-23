@@ -1,12 +1,28 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { ChevronDown, ChevronUp, Copy, Save } from "lucide-react";
+import { 
+  AlertCircle, 
+  ArrowLeftRight, 
+  Calculator, 
+  CalendarClock, 
+  Check, 
+  ChevronDown, 
+  ChevronUp, 
+  Copy, 
+  HelpCircle, 
+  Info, 
+  PiggyBank, 
+  PoundSterling, 
+  Save, 
+  TrendingUp, 
+  X 
+} from "lucide-react";
 import { 
   Table, 
   TableBody, 
@@ -15,41 +31,151 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
-// UK tax rates and bands for 2023/2024
+// UK Tax Years
+enum TaxYear {
+  Y2023_2024 = "2023-2024",
+  Y2024_2025 = "2024-2025",
+}
+
+// UK tax rates and bands for different tax years
 const TAX_RATES = {
-  personal_allowance: 12570,
-  basic_rate: { threshold: 50270, rate: 20 },
-  higher_rate: { threshold: 125140, rate: 40 },
-  additional_rate: { rate: 45 }
+  [TaxYear.Y2023_2024]: {
+    personal_allowance: 12570,
+    basic_rate: { threshold: 50270, rate: 20 },
+    higher_rate: { threshold: 125140, rate: 40 },
+    additional_rate: { rate: 45 }
+  },
+  [TaxYear.Y2024_2025]: {
+    personal_allowance: 12570,
+    basic_rate: { threshold: 50270, rate: 20 },
+    higher_rate: { threshold: 125140, rate: 40 },
+    additional_rate: { rate: 45 }
+  }
 };
 
-// UK National Insurance rates for 2023/2024
+// UK National Insurance rates for different tax years
 const NI_RATES = {
-  primary_threshold: 12570,
-  upper_earnings_limit: 50270,
-  primary_rate: 12,
-  upper_rate: 2
+  [TaxYear.Y2023_2024]: {
+    primary_threshold: 12570,
+    upper_earnings_limit: 50270,
+    primary_rate: 12,
+    upper_rate: 2
+  },
+  [TaxYear.Y2024_2025]: {
+    primary_threshold: 12570,
+    upper_earnings_limit: 50270,
+    primary_rate: 10, // Reduced from 12% to 10% from January 6, 2024
+    upper_rate: 2
+  }
 };
 
+// Common UK tax codes
+const COMMON_TAX_CODES = [
+  { code: "1257L", description: "Standard tax-free Personal Allowance" },
+  { code: "BR", description: "All income taxed at basic rate (20%)" },
+  { code: "D0", description: "All income taxed at higher rate (40%)" },
+  { code: "D1", description: "All income taxed at additional rate (45%)" },
+  { code: "NT", description: "No tax deducted from this income" },
+  { code: "K", description: "Reduced tax-free allowance (K prefix)" },
+  { code: "S", description: "Scottish tax rates apply" },
+  { code: "0T", description: "No Personal Allowance" },
+];
+
+// Salary payment frequencies
+const PAYMENT_FREQUENCIES = [
+  { value: "monthly", label: "Monthly", divisor: 12 },
+  { value: "weekly", label: "Weekly", divisor: 52 },
+  { value: "fourWeekly", label: "Four-Weekly", divisor: 13 },
+  { value: "daily", label: "Daily (5 days/week)", divisor: 260 },
+  { value: "hourly", label: "Hourly (37.5hrs/week)", divisor: 1950 },
+];
+
+// Student Loan types
+const STUDENT_LOAN_TYPES = [
+  { value: "none", label: "No Student Loan" },
+  { value: "plan1", label: "Plan 1", threshold: 22015, rate: 9 },
+  { value: "plan2", label: "Plan 2", threshold: 27295, rate: 9 },
+  { value: "plan4", label: "Plan 4 (Scotland)", threshold: 27660, rate: 9 },
+  { value: "plan5", label: "Plan 5 (Northern Ireland)", threshold: 25000, rate: 9 },
+  { value: "postgrad", label: "Postgraduate Loan", threshold: 21000, rate: 6 },
+];
+
+// Pension scheme types
+const PENSION_SCHEMES = [
+  { value: "relief-at-source", label: "Relief at Source" },
+  { value: "net-pay", label: "Net Pay Arrangement" },
+  { value: "salary-sacrifice", label: "Salary Sacrifice" },
+];
+
+// Student Loan Details
+type StudentLoanDetails = {
+  plan: string;
+  amount: number;
+};
+
+// Enhanced Salary Data Type
 type SalaryData = {
+  // Basic Details
   annualSalary: number;
+  salaryFrequency: string;
+  salaryPeriodValue: number;
+  taxYear: TaxYear;
   taxCode: string;
+  
+  // Pension Settings
   pensionPercent: number;
   pensionAmount: number;
   usePensionPercent: boolean;
+  pensionScheme: string;
+  
+  // Additional Income & Benefits
   yearlyBonus: number;
   taxableBenefits: number;
   cashAllowances: number;
-  preDeductions: number;
-  postDeductions: number;
+  
+  // Deductions
+  preDeductions: number; // Pre-tax deductions beyond pension contributions
+  postDeductions: number; // Post-tax deductions like salary sacrifice
+  
+  // Student Loan
+  studentLoan: string;
+  hasPostgraduateLoan: boolean;
+  
+  // Meta Info
+  label?: string; // For comparison (e.g. "Current Salary", "New Offer")
+  color?: string; // For visualization
 };
 
+// Enhanced Salary Result Type
 type SalaryResult = {
+  // Totals - Annual
   annualGross: number;
-  monthlyGross: number;
   annualTaxable: number;
+  annualTakeHome: number;
   
+  // Totals - Monthly/Weekly/etc.
+  periodGross: number;
+  periodTakeHome: number;
+  
+  // Income Tax Breakdown
   incomeTax: {
     personalAllowance: number;
     basicRate: { amount: number; tax: number };
@@ -58,68 +184,109 @@ type SalaryResult = {
     total: number;
   };
   
+  // National Insurance Breakdown
   nationalInsurance: {
     primaryThreshold: { amount: number; contribution: number };
     upperEarningsLimit: { amount: number; contribution: number };
     total: number;
   };
   
+  // Pension Contribution
   pension: {
     annualContribution: number;
-    monthlyContribution: number;
+    periodContribution: number;
+    taxRelief: number;
   };
   
-  annualTakeHome: number;
-  monthlyTakeHome: number;
+  // Student Loan Breakdown
+  studentLoan?: {
+    plan: string; 
+    amount: number;
+  };
+  
+  postgraduateLoan?: {
+    amount: number;
+  };
+  
+  // Rates and Factors
   effectiveTaxRate: number;
+  marginalTaxRate: number;
+  
+  // Period Breakdown (for visualizations)
+  periodBreakdown: {
+    incomeTax: number;
+    nationalInsurance: number;
+    pension: number;
+    studentLoan: number;
+    takeHome: number;
+  };
 };
 
 export function SalaryCalculator() {
   const [activeTab, setActiveTab] = useState("single");
   const [showDetails, setShowDetails] = useState(false);
+  const [selectedTaxYear, setSelectedTaxYear] = useState<TaxYear>(TaxYear.Y2024_2025);
   
-  // Single Salary Calculation
-  const [salary, setSalary] = useState<SalaryData>({
+  // Default values for new salary
+  const getDefaultSalaryData = (label?: string, color?: string): SalaryData => ({
+    // Basic Details
     annualSalary: 60000,
+    salaryFrequency: "monthly",
+    salaryPeriodValue: 5000,
+    taxYear: selectedTaxYear,
     taxCode: "1257L",
+    
+    // Pension Settings
     pensionPercent: 5,
-    pensionAmount: 0,
+    pensionAmount: 3000,
     usePensionPercent: true,
+    pensionScheme: "relief-at-source",
+    
+    // Additional Income & Benefits
     yearlyBonus: 0,
     taxableBenefits: 0,
     cashAllowances: 0,
+    
+    // Deductions
     preDeductions: 0,
-    postDeductions: 0
+    postDeductions: 0,
+    
+    // Student Loan
+    studentLoan: "none",
+    hasPostgraduateLoan: false,
+    
+    // Meta
+    label,
+    color
   });
   
+  // Single Salary Calculation
+  const [salary, setSalary] = useState<SalaryData>(getDefaultSalaryData("Current Salary", "#4f46e5"));
   const [salaryResult, setSalaryResult] = useState<SalaryResult | null>(null);
   
   // Comparison Salary Calculation
-  const [compareSalary, setCompareSalary] = useState<SalaryData>({
-    annualSalary: 70000,
-    taxCode: "1257L",
-    pensionPercent: 5,
-    pensionAmount: 0,
-    usePensionPercent: true,
-    yearlyBonus: 0,
-    taxableBenefits: 0,
-    cashAllowances: 0,
-    preDeductions: 0,
-    postDeductions: 0
-  });
+  const [compareSalary, setCompareSalary] = useState<SalaryData>(getDefaultSalaryData("New Offer", "#f97316"));
   
   const [compareSalaryResult, setCompareSalaryResult] = useState<SalaryResult | null>(null);
   
   // Helper functions
-  const extractPersonalAllowance = (taxCode: string): number => {
+  const extractPersonalAllowance = (taxCode: string, taxYear: TaxYear = TaxYear.Y2024_2025): number => {
+    // Handle special tax codes
+    if (taxCode === "BR" || taxCode === "D0" || taxCode === "D1" || taxCode === "0T") {
+      return 0; // No personal allowance
+    }
+    
     // Extract numbers from tax code (e.g., 1257L -> 12570)
     const match = taxCode.match(/^(\d+)[A-Z]$/);
     if (match) {
       return parseInt(match[1]) * 10;
     }
-    return TAX_RATES.personal_allowance; // Default
+    
+    // Default to standard personal allowance for the selected tax year
+    return TAX_RATES[taxYear].personal_allowance;
   };
   
+  // Utility functions
   const formatCurrency = (amount: number): string => {
     return `£${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
   };
@@ -128,9 +295,49 @@ export function SalaryCalculator() {
     return `${percentage.toFixed(2)}%`;
   };
   
-  // Calculate salary breakdown
+  const getPeriodValue = (annual: number, frequency: string): number => {
+    const period = PAYMENT_FREQUENCIES.find(p => p.value === frequency);
+    if (!period) return annual / 12; // Default to monthly
+    return annual / period.divisor;
+  };
+  
+  // Calculate student loan repayment
+  const calculateStudentLoanRepayment = (
+    annualSalary: number, 
+    studentLoanPlan: string, 
+    hasPostgradLoan: boolean
+  ): { plan?: StudentLoanDetails; postgrad?: StudentLoanDetails } => {
+    const result: { plan?: StudentLoanDetails; postgrad?: StudentLoanDetails } = {};
+    
+    // Calculate main student loan repayment
+    if (studentLoanPlan !== "none") {
+      const loanType = STUDENT_LOAN_TYPES.find(l => l.value === studentLoanPlan);
+      if (loanType && annualSalary > loanType.threshold) {
+        const amount = ((annualSalary - loanType.threshold) * loanType.rate) / 100;
+        result.plan = { plan: studentLoanPlan, amount };
+      }
+    }
+    
+    // Calculate postgraduate loan repayment if applicable
+    if (hasPostgradLoan) {
+      const pgLoanType = STUDENT_LOAN_TYPES.find(l => l.value === "postgrad");
+      if (pgLoanType && annualSalary > pgLoanType.threshold) {
+        const amount = ((annualSalary - pgLoanType.threshold) * pgLoanType.rate) / 100;
+        result.postgrad = { plan: "postgrad", amount };
+      }
+    }
+    
+    return result;
+  };
+  
+  // Enhanced salary calculation
   const calculateSalary = (data: SalaryData): SalaryResult => {
-    const personalAllowance = extractPersonalAllowance(data.taxCode);
+    // Get tax rate structures for selected tax year
+    const taxRates = TAX_RATES[data.taxYear || TaxYear.Y2024_2025];
+    const niRates = NI_RATES[data.taxYear || TaxYear.Y2024_2025];
+    
+    // Extract personal allowance from tax code
+    const personalAllowance = extractPersonalAllowance(data.taxCode, data.taxYear);
     
     // Calculate pension contribution
     const pensionContribution = data.usePensionPercent
@@ -169,25 +376,25 @@ export function SalaryCalculator() {
     
     // Basic rate (20%)
     const basicRateAmount = Math.min(
-      TAX_RATES.basic_rate.threshold - adjustedPersonalAllowance,
+      taxRates.basic_rate.threshold - adjustedPersonalAllowance,
       remainingTaxable
     );
-    const basicRateTax = (basicRateAmount * TAX_RATES.basic_rate.rate) / 100;
+    const basicRateTax = (basicRateAmount * taxRates.basic_rate.rate) / 100;
     remainingTaxable -= basicRateAmount;
     totalTax += basicRateTax;
     
     // Higher rate (40%)
     const higherRateAmount = Math.min(
-      TAX_RATES.higher_rate.threshold - TAX_RATES.basic_rate.threshold,
+      taxRates.higher_rate.threshold - taxRates.basic_rate.threshold,
       remainingTaxable
     );
-    const higherRateTax = (higherRateAmount * TAX_RATES.higher_rate.rate) / 100;
+    const higherRateTax = (higherRateAmount * taxRates.higher_rate.rate) / 100;
     remainingTaxable -= higherRateAmount;
     totalTax += higherRateTax;
     
     // Additional rate (45%)
     const additionalRateAmount = remainingTaxable;
-    const additionalRateTax = (additionalRateAmount * TAX_RATES.additional_rate.rate) / 100;
+    const additionalRateTax = (additionalRateAmount * taxRates.additional_rate.rate) / 100;
     totalTax += additionalRateTax;
     
     // Calculate National Insurance
@@ -195,22 +402,37 @@ export function SalaryCalculator() {
     let remainingForNI = data.annualSalary; // Only salary is subject to NI
     
     // Below primary threshold (0%)
-    const belowPrimaryAmount = Math.min(NI_RATES.primary_threshold, remainingForNI);
+    const belowPrimaryAmount = Math.min(niRates.primary_threshold, remainingForNI);
     remainingForNI -= belowPrimaryAmount;
     
-    // Between primary threshold and upper earnings limit (12%)
+    // Between primary threshold and upper earnings limit (10% for 2024/25, was 12%)
     const primaryAmount = Math.min(
-      NI_RATES.upper_earnings_limit - NI_RATES.primary_threshold,
+      niRates.upper_earnings_limit - niRates.primary_threshold,
       remainingForNI
     );
-    const primaryContribution = (primaryAmount * NI_RATES.primary_rate) / 100;
+    const primaryContribution = (primaryAmount * niRates.primary_rate) / 100;
     remainingForNI -= primaryAmount;
     niContribution += primaryContribution;
     
     // Above upper earnings limit (2%)
     const upperAmount = remainingForNI;
-    const upperContribution = (upperAmount * NI_RATES.upper_rate) / 100;
+    const upperContribution = (upperAmount * niRates.upper_rate) / 100;
     niContribution += upperContribution;
+    
+    // Calculate student loan repayments
+    const studentLoanRepayments = calculateStudentLoanRepayment(
+      data.annualSalary,
+      data.studentLoan,
+      data.hasPostgraduateLoan
+    );
+    
+    const studentLoanTotal = (studentLoanRepayments.plan?.amount || 0) + 
+                            (studentLoanRepayments.postgrad?.amount || 0);
+    
+    // Calculate pension tax relief (for Relief at Source schemes)
+    const pensionTaxRelief = data.pensionScheme === "relief-at-source" 
+      ? pensionContribution * 0.2 // Basic rate tax relief
+      : 0;
     
     // Calculate take-home pay
     const annualTakeHome = 
@@ -218,19 +440,47 @@ export function SalaryCalculator() {
       totalTax - 
       niContribution - 
       pensionContribution - 
+      studentLoanTotal -
       data.postDeductions;
     
-    const monthlyTakeHome = annualTakeHome / 12;
-    const monthlyGross = annualGross / 12;
+    // Calculate period value based on salary frequency
+    const periodDivisor = PAYMENT_FREQUENCIES.find(p => p.value === data.salaryFrequency)?.divisor || 12;
+    const periodGross = annualGross / periodDivisor;
+    const periodTakeHome = annualTakeHome / periodDivisor;
     
-    // Calculate effective tax rate
+    // Calculate effective and marginal tax rates
     const effectiveTaxRate = ((totalTax + niContribution) / annualGross) * 100;
     
+    // Determine marginal tax rate based on income level
+    let marginalTaxRate = 0;
+    if (annualTaxable > taxRates.higher_rate.threshold) {
+      marginalTaxRate = taxRates.additional_rate.rate;
+    } else if (annualTaxable > taxRates.basic_rate.threshold) {
+      marginalTaxRate = taxRates.higher_rate.rate;
+    } else if (annualTaxable > 0) {
+      marginalTaxRate = taxRates.basic_rate.rate;
+    }
+    
+    // Prepare period breakdown for visualization
+    const periodBreakdown = {
+      incomeTax: totalTax / periodDivisor,
+      nationalInsurance: niContribution / periodDivisor,
+      pension: pensionContribution / periodDivisor,
+      studentLoan: studentLoanTotal / periodDivisor,
+      takeHome: periodTakeHome
+    };
+    
     return {
+      // Totals - Annual
       annualGross,
-      monthlyGross,
       annualTaxable,
+      annualTakeHome,
       
+      // Totals - Period (Monthly/Weekly/etc.)
+      periodGross,
+      periodTakeHome,
+      
+      // Income Tax Breakdown
       incomeTax: {
         personalAllowance: adjustedPersonalAllowance,
         basicRate: { amount: basicRateAmount, tax: basicRateTax },
@@ -239,20 +489,30 @@ export function SalaryCalculator() {
         total: totalTax
       },
       
+      // National Insurance Breakdown
       nationalInsurance: {
         primaryThreshold: { amount: primaryAmount, contribution: primaryContribution },
         upperEarningsLimit: { amount: upperAmount, contribution: upperContribution },
         total: niContribution
       },
       
+      // Pension Contribution
       pension: {
         annualContribution: pensionContribution,
-        monthlyContribution: pensionContribution / 12
+        periodContribution: pensionContribution / periodDivisor,
+        taxRelief: pensionTaxRelief
       },
       
-      annualTakeHome,
-      monthlyTakeHome,
-      effectiveTaxRate
+      // Student Loan (if applicable)
+      ...(studentLoanRepayments.plan && { studentLoan: studentLoanRepayments.plan }),
+      ...(studentLoanRepayments.postgrad && { postgraduateLoan: studentLoanRepayments.postgrad }),
+      
+      // Rates and Factors
+      effectiveTaxRate,
+      marginalTaxRate,
+      
+      // Period Breakdown (for visualizations)
+      periodBreakdown
     };
   };
   
