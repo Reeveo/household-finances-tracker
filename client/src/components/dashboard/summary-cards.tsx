@@ -4,6 +4,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type SummaryCardProps = {
   title: string;
@@ -37,21 +38,23 @@ function SummaryCard({
   progress,
   alert
 }: SummaryCardProps) {
+  const isMobile = useIsMobile();
+  
   return (
-    <Card className="shadow-sm flex flex-col">
-      <CardContent className="p-4 flex-grow">
-        <div className="flex flex-col space-y-2">
+    <Card className="shadow-sm flex flex-col h-full">
+      <CardContent className="p-3 lg:p-4 flex-grow">
+        <div className="flex flex-col space-y-1.5 lg:space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <h3 className="text-sm font-medium text-muted">{title}</h3>
+              <h3 className="text-xs sm:text-sm font-medium text-muted">{title}</h3>
               {tooltip && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <Info className="w-3.5 h-3.5 ml-1 text-muted-foreground" />
+                      <Info className="w-3 h-3 lg:w-3.5 lg:h-3.5 ml-1 text-muted-foreground" />
                     </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="text-xs max-w-xs">{tooltip}</p>
+                    <TooltipContent side={isMobile ? "bottom" : "top"}>
+                      <p className="text-xs max-w-[200px] sm:max-w-xs">{tooltip}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -60,50 +63,50 @@ function SummaryCard({
           </div>
           
           <div className="flex items-end justify-between">
-            <div className="text-2xl font-bold">{amount}</div>
-            <div className={`flex items-center text-sm ${
+            <div className="text-lg sm:text-xl lg:text-2xl font-bold">{amount}</div>
+            <div className={`flex items-center text-xs sm:text-sm ${
               change.isPositive ? "text-success" : "text-destructive"
             }`}>
               {change.isPositive ? (
-                <TrendingUp className="w-4 h-4 mr-1" />
+                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
               ) : (
-                <TrendingDown className="w-4 h-4 mr-1" />
+                <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
               )}
               <span>{change.value}</span>
             </div>
           </div>
           
           {progress && (
-            <div className="mt-2 space-y-1">
-              <div className="flex justify-between items-center text-xs text-muted-foreground">
+            <div className="mt-1 sm:mt-2 space-y-0.5 sm:space-y-1">
+              <div className="flex justify-between items-center text-[10px] sm:text-xs text-muted-foreground">
                 <span>{progress.label}</span>
                 <span>{progress.percentage}%</span>
               </div>
-              <Progress value={progress.percentage} className="h-1.5" />
+              <Progress value={progress.percentage} className="h-1 sm:h-1.5" />
             </div>
           )}
           
           {alert && (
-            <div className={`flex items-start mt-2 p-1.5 rounded-sm text-xs ${
+            <div className={`flex items-start mt-1 sm:mt-2 p-1 sm:p-1.5 rounded-sm text-[10px] sm:text-xs ${
               alert.type === "warning" ? "bg-amber-50 text-amber-800" : "bg-sky-50 text-sky-800"
             }`}>
               {alert.type === "warning" ? (
-                <AlertCircle className="w-3.5 h-3.5 mr-1 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 flex-shrink-0 mt-[1px]" />
               ) : (
-                <Info className="w-3.5 h-3.5 mr-1 flex-shrink-0 mt-0.5" />
+                <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1 flex-shrink-0 mt-[1px]" />
               )}
-              <span>{alert.message}</span>
+              <span className="line-clamp-2 sm:line-clamp-none">{alert.message}</span>
             </div>
           )}
         </div>
       </CardContent>
       
       {actionLink && actionText && (
-        <CardFooter className="px-4 py-2 pt-0 mt-auto">
-          <Link href={actionLink}>
-            <Button variant="ghost" size="sm" className="w-full p-1 h-8 text-xs justify-between hover:bg-muted/80">
+        <CardFooter className="px-3 lg:px-4 py-1 sm:py-2 pt-0 mt-auto">
+          <Link href={actionLink} className="w-full">
+            <Button variant="ghost" size="sm" className="w-full p-1 h-7 sm:h-8 text-[10px] sm:text-xs justify-between hover:bg-muted/80">
               {actionText}
-              <ArrowRight className="h-3.5 w-3.5 ml-1" />
+              <ArrowRight className="h-3 w-3 sm:h-3.5 sm:w-3.5 ml-1" />
             </Button>
           </Link>
         </CardFooter>
@@ -169,7 +172,7 @@ export function SummaryCards() {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
       {summaryData.map((card, index) => (
         <SummaryCard
           key={index}

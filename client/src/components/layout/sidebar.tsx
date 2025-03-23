@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   CreditCard,
@@ -12,8 +12,10 @@ import {
   Settings,
   LogOut,
   Menu,
-  PoundSterling
+  PoundSterling,
+  X
 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type SidebarProps = {
   className?: string;
@@ -23,6 +25,28 @@ export function Sidebar({ className }: SidebarProps) {
   const [location] = useLocation();
   const { logoutMutation } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
+  
+  // Close sidebar when navigating to a new route on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
+  }, [location, isMobile]);
+  
+  // Close sidebar when pressing escape key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileMenuOpen(false);
+      }
+    };
+    
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, []);
 
   const navItems = [
     {
@@ -90,49 +114,54 @@ export function Sidebar({ className }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile navbar */}
-      <div className="lg:hidden flex items-center justify-between p-4 bg-primary text-primary-foreground">
+      {/* Mobile navbar/header - fixed at top */}
+      <div className="lg:hidden flex items-center justify-between p-3 bg-primary text-primary-foreground fixed top-0 left-0 right-0 z-20 shadow-md">
         <div className="flex items-center space-x-2">
-          <PoundSterling className="w-6 h-6" />
-          <span className="font-semibold text-lg">Personal Finance Tracker</span>
+          <PoundSterling className="w-5 h-5" />
+          <span className="font-semibold text-base">Finance Tracker</span>
         </div>
         <button 
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-2 rounded-md hover:bg-primary-foreground/10"
+          className="p-1.5 rounded-md hover:bg-primary-foreground/10"
+          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
         >
-          <Menu className="w-6 h-6" />
+          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
+
+      {/* Spacer for mobile to prevent content from being hidden under navbar */}
+      <div className="h-12 lg:hidden"></div>
 
       {/* Sidebar */}
       <aside 
         className={cn(
-          "w-64 h-screen bg-primary text-primary-foreground flex-shrink-0 fixed lg:sticky top-0 z-10 transition-all duration-300 transform",
+          "w-64 lg:w-56 h-[calc(100vh-48px)] lg:h-screen bg-primary text-primary-foreground flex-shrink-0 fixed lg:sticky top-12 lg:top-0 z-30 transition-all duration-300 transform overflow-hidden",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           className
         )}
       >
-        <div className="p-4 flex items-center">
-          <PoundSterling className="w-6 h-6 mr-2" />
-          <span className="font-bold text-lg">Finance Tracker</span>
+        {/* Desktop logo */}
+        <div className="p-3 hidden lg:flex items-center border-b border-primary-foreground/10">
+          <PoundSterling className="w-5 h-5 mr-2" />
+          <span className="font-bold text-base">Finance Tracker</span>
         </div>
         
-        <nav className="mt-4 h-[calc(100vh-64px)] overflow-y-auto">
+        <nav className="h-full overflow-y-auto pb-20">
           <ul className="p-2 w-full">
             {navItems.map((section, idx) => (
-              <li key={idx} className="mb-4">
-                <div className="px-4 py-2 text-xs uppercase text-primary-foreground/60 font-semibold tracking-wider">
+              <li key={idx} className="mb-3">
+                <div className="px-3 py-1.5 text-xs uppercase text-primary-foreground/60 font-semibold tracking-wider">
                   {section.title}
                 </div>
                 <ul>
                   {section.items.map((item, itemIdx) => (
-                    <li key={itemIdx}>
+                    <li key={itemIdx} className="mb-1">
                       {item.onClick ? (
                         <button
                           onClick={item.onClick}
                           className={cn(
-                            "flex items-center px-4 py-2 w-full text-left text-primary-foreground hover:bg-white/10 rounded-md",
-                            location === item.href && "bg-white/10"
+                            "flex items-center px-3 py-1.5 w-full text-left text-sm text-primary-foreground hover:bg-white/10 rounded-md",
+                            location === item.href && "bg-white/10 font-medium"
                           )}
                         >
                           {item.icon}
@@ -142,8 +171,8 @@ export function Sidebar({ className }: SidebarProps) {
                         <Link 
                           href={item.href}
                           className={cn(
-                            "flex items-center px-4 py-2 text-primary-foreground hover:bg-white/10 rounded-md",
-                            location === item.href && "bg-white/10"
+                            "flex items-center px-3 py-1.5 text-sm text-primary-foreground hover:bg-white/10 rounded-md",
+                            location === item.href && "bg-white/10 font-medium"
                           )}
                           onClick={() => setMobileMenuOpen(false)}
                         >
@@ -163,7 +192,7 @@ export function Sidebar({ className }: SidebarProps) {
       {/* Overlay when mobile menu is open */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-[5] lg:hidden"
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
