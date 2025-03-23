@@ -480,9 +480,8 @@ export function CSVImport() {
           // Normalize date format
           const normalizedDate = normalizeDate(dateValue, currentBankFormat.dateFormat);
           
-          // Auto-categorize based on transaction description
-          const suggestedCategory = suggestCategory(description);
-          const suggestedSubcategory = suggestSubcategory(suggestedCategory, description);
+          // Auto-categorize based on transaction description using our advanced categorization engine
+          const { category: suggestedCategory, subcategory: suggestedSubcategory } = suggestCategoryWithConfidence(description, amount);
           
           // Create transaction object
           const transaction: BankTransaction = {
@@ -585,8 +584,14 @@ export function CSVImport() {
   const handleCategoryChange = (index: number, category: string) => {
     const newData = [...csvData];
     newData[index].category = category;
-    // Update subcategory based on new category
-    newData[index].subcategory = suggestSubcategory(category, newData[index].description);
+    // Update subcategory based on new category using the advanced categorization engine
+    const result = suggestCategoryWithConfidence(
+      newData[index].description, 
+      newData[index].amount
+    );
+    // Override with the category the user selected, but keep the suggested subcategory
+    const subcategory = SUB_CATEGORIES[category][0];
+    newData[index].subcategory = subcategory;
     setCsvData(newData);
   };
   
@@ -604,29 +609,48 @@ export function CSVImport() {
     setCsvData(newData);
   };
   
-  // Apply category to all similar transactions
+  // Apply category to all similar transactions using advanced categorization engine
   const applyCategoryToSimilar = (index: number) => {
     const sourceTransaction = csvData[index];
-    const sourceDesc = sourceTransaction.description.toLowerCase();
     const newData = [...csvData];
     
-    // Find transactions with similar descriptions and apply the same category/subcategory
-    newData.forEach((transaction, idx) => {
-      const targetDesc = transaction.description.toLowerCase();
+    // Import the more sophisticated similar transaction finder from our categorization engine
+    import("@/lib/utils/categorization").then(({ findSimilarTransactions, applyCategoryToSimilar }) => {
+      // Find similar transactions
+      const similarTransactions = findSimilarTransactions(
+        sourceTransaction.description, 
+        newData
+      );
       
-      // Check if descriptions are similar
-      if (sourceDesc.includes(targetDesc) || targetDesc.includes(sourceDesc)) {
-        transaction.category = sourceTransaction.category;
-        transaction.subcategory = sourceTransaction.subcategory;
-      }
-    });
-    
-    setCsvData(newData);
-    
-    toast({
-      title: "Categories updated",
-      description: `Applied "${sourceTransaction.category} > ${sourceTransaction.subcategory}" to similar transactions`,
-      variant: "default"
+      // Apply the same category and subcategory to similar transactions
+      const updatedTransactions = applyCategoryToSimilar(
+        sourceTransaction,
+        newData
+      );
+      
+      // Count the number of changes
+      const changedCount = updatedTransactions.filter((t, i) => 
+        t.category !== newData[i].category || t.subcategory !== newData[i].subcategory
+      ).length - 1; // Subtract 1 as the source transaction is counted
+      
+      setCsvData(updatedTransactions);
+      
+      // Learn from this categorization for future suggestions
+      import("@/lib/utils/categorization").then(({ learnFromCorrection }) => {
+        learnFromCorrection(
+          sourceTransaction.description,
+          "unknown", // Original category is unknown as it's user-applied
+          "unknown", // Original subcategory is unknown as it's user-applied
+          sourceTransaction.category,
+          sourceTransaction.subcategory
+        );
+      });
+      
+      toast({
+        title: "Categories updated",
+        description: `Applied "${sourceTransaction.category} > ${sourceTransaction.subcategory}" to ${changedCount} similar transaction(s)`,
+        variant: "default"
+      });
     });
   };
   
