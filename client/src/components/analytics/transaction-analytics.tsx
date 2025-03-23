@@ -1098,7 +1098,7 @@ export function TransactionAnalytics() {
                     <div className="rounded-md border overflow-hidden">
                       <table className="w-full text-sm">
                         <thead className="bg-muted/50">
-                          <tr>
+                          <tr key="header-row">
                             <th className="font-medium text-left p-2 pl-4">Merchant</th>
                             <th className="font-medium text-right p-2">Transactions</th>
                             <th className="font-medium text-right p-2">Avg. Amount</th>
