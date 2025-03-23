@@ -16,7 +16,7 @@ export default function TransactionAnalyticsPage() {
         <div className="space-y-4 lg:space-y-6 max-w-7xl mx-auto">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Link href="/income-expense">
+              <Link href="/income-expenses">
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <ArrowLeft className="h-4 w-4" />
                 </Button>

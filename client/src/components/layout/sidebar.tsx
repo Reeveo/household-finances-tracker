@@ -13,7 +13,8 @@ import {
   LogOut,
   Menu,
   PoundSterling,
-  X
+  X,
+  BarChart
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -66,6 +67,11 @@ export function Sidebar({ className }: SidebarProps) {
           title: "Savings & Investments",
           icon: <TrendingUp className="w-5 h-5 mr-3" />,
           href: "/savings-investments",
+        },
+        {
+          title: "Transaction Analytics",
+          icon: <BarChart className="w-5 h-5 mr-3" />,
+          href: "/transaction-analytics",
         },
       ],
     },

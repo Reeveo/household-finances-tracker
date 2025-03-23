@@ -857,94 +857,100 @@ export function TransactionAnalytics() {
                   <CardContent>
                     <div className="h-[350px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        {chartType === "bar" && (
-                          <BarChart
-                            data={timeSeriesData}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis
-                              dataKey="date"
-                              angle={-45}
-                              textAnchor="end"
-                              height={60}
-                              tick={{ fontSize: 12 }}
-                            />
-                            <YAxis tickFormatter={(value) => `£${value}`} />
-                            <Tooltip formatter={(value: number) => [`£${value.toFixed(2)}`, 'Amount']} />
-                            <Legend />
-                            {CATEGORIES.filter(category => 
-                              timeSeriesData.some(d => (d[category] as number) > 0)
-                            ).map((category, index) => (
-                              <Bar
-                                key={category}
-                                dataKey={category}
-                                stackId="a"
-                                fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
-                              />
-                            ))}
-                          </BarChart>
-                        )}
-                        {chartType === "line" && (
-                          <LineChart
-                            data={timeSeriesData}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis
-                              dataKey="date"
-                              angle={-45}
-                              textAnchor="end"
-                              height={60}
-                              tick={{ fontSize: 12 }}
-                            />
-                            <YAxis tickFormatter={(value) => `£${value}`} />
-                            <Tooltip formatter={(value: number) => [`£${value.toFixed(2)}`, 'Amount']} />
-                            <Legend />
-                            {CATEGORIES.filter(category => 
-                              timeSeriesData.some(d => (d[category] as number) > 0)
-                            ).map((category, index) => (
-                              <Line
-                                key={category}
-                                type="monotone"
-                                dataKey={category}
-                                stroke={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
-                                activeDot={{ r: 8 }}
-                              />
-                            ))}
-                          </LineChart>
-                        )}
-                        {chartType === "area" && (
-                          <AreaChart
-                            data={timeSeriesData}
-                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis
-                              dataKey="date"
-                              angle={-45}
-                              textAnchor="end"
-                              height={60}
-                              tick={{ fontSize: 12 }}
-                            />
-                            <YAxis tickFormatter={(value) => `£${value}`} />
-                            <Tooltip formatter={(value: number) => [`£${value.toFixed(2)}`, 'Amount']} />
-                            <Legend />
-                            {CATEGORIES.filter(category => 
-                              timeSeriesData.some(d => (d[category] as number) > 0)
-                            ).map((category, index) => (
-                              <Area
-                                key={category}
-                                type="monotone"
-                                dataKey={category}
-                                stackId="1"
-                                stroke={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
-                                fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
-                                fillOpacity={0.6}
-                              />
-                            ))}
-                          </AreaChart>
-                        )}
+                        {(() => {
+                          if (chartType === "bar") {
+                            return (
+                              <BarChart
+                                data={timeSeriesData}
+                                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis
+                                  dataKey="date"
+                                  angle={-45}
+                                  textAnchor="end"
+                                  height={60}
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <YAxis tickFormatter={(value) => `£${value}`} />
+                                <Tooltip formatter={(value: number) => [`£${value.toFixed(2)}`, 'Amount']} />
+                                <Legend />
+                                {CATEGORIES.filter(category => 
+                                  timeSeriesData.some(d => (d[category] as number) > 0)
+                                ).map((category, index) => (
+                                  <Bar
+                                    key={category}
+                                    dataKey={category}
+                                    stackId="a"
+                                    fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
+                                  />
+                                ))}
+                              </BarChart>
+                            );
+                          } else if (chartType === "line") {
+                            return (
+                              <LineChart
+                                data={timeSeriesData}
+                                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis
+                                  dataKey="date"
+                                  angle={-45}
+                                  textAnchor="end"
+                                  height={60}
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <YAxis tickFormatter={(value) => `£${value}`} />
+                                <Tooltip formatter={(value: number) => [`£${value.toFixed(2)}`, 'Amount']} />
+                                <Legend />
+                                {CATEGORIES.filter(category => 
+                                  timeSeriesData.some(d => (d[category] as number) > 0)
+                                ).map((category, index) => (
+                                  <Line
+                                    key={category}
+                                    type="monotone"
+                                    dataKey={category}
+                                    stroke={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
+                                    activeDot={{ r: 8 }}
+                                  />
+                                ))}
+                              </LineChart>
+                            );
+                          } else {
+                            return (
+                              <AreaChart
+                                data={timeSeriesData}
+                                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis
+                                  dataKey="date"
+                                  angle={-45}
+                                  textAnchor="end"
+                                  height={60}
+                                  tick={{ fontSize: 12 }}
+                                />
+                                <YAxis tickFormatter={(value) => `£${value}`} />
+                                <Tooltip formatter={(value: number) => [`£${value.toFixed(2)}`, 'Amount']} />
+                                <Legend />
+                                {CATEGORIES.filter(category => 
+                                  timeSeriesData.some(d => (d[category] as number) > 0)
+                                ).map((category, index) => (
+                                  <Area
+                                    key={category}
+                                    type="monotone"
+                                    dataKey={category}
+                                    stackId="1"
+                                    stroke={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
+                                    fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
+                                    fillOpacity={0.6}
+                                  />
+                                ))}
+                              </AreaChart>
+                            );
+                          }
+                        })()}
                       </ResponsiveContainer>
                     </div>
                   </CardContent>
