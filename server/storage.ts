@@ -121,6 +121,7 @@ export class MemStorage implements IStorage {
     this.budgets = new Map();
     this.savingsGoals = new Map();
     this.investments = new Map();
+    this.transactions = new Map();
     
     this.currentUserId = 1;
     this.currentSharedAccessId = 1;
@@ -130,6 +131,7 @@ export class MemStorage implements IStorage {
     this.currentBudgetId = 1;
     this.currentSavingsGoalId = 1;
     this.currentInvestmentId = 1;
+    this.currentTransactionId = 1;
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000 // 24 hours
@@ -392,6 +394,79 @@ export class MemStorage implements IStorage {
   
   async deleteInvestment(id: number): Promise<boolean> {
     return this.investments.delete(id);
+  }
+  
+  // Transaction methods
+  async getTransactions(userId: number): Promise<Transaction[]> {
+    return Array.from(this.transactions.values()).filter(
+      (transaction) => transaction.userId === userId
+    );
+  }
+  
+  async getTransactionById(id: number): Promise<Transaction | undefined> {
+    return this.transactions.get(id);
+  }
+  
+  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
+    const id = this.currentTransactionId++;
+    const createdAt = new Date();
+    const transaction: Transaction = { ...insertTransaction, id, createdAt };
+    this.transactions.set(id, transaction);
+    return transaction;
+  }
+  
+  async createManyTransactions(insertTransactions: InsertTransaction[]): Promise<Transaction[]> {
+    const createdTransactions: Transaction[] = [];
+    
+    for (const insertTransaction of insertTransactions) {
+      const transaction = await this.createTransaction(insertTransaction);
+      createdTransactions.push(transaction);
+    }
+    
+    return createdTransactions;
+  }
+  
+  async updateTransaction(id: number, transactionUpdate: Partial<InsertTransaction>): Promise<Transaction | undefined> {
+    const transaction = this.transactions.get(id);
+    if (!transaction) return undefined;
+    
+    const updatedTransaction = { ...transaction, ...transactionUpdate };
+    this.transactions.set(id, updatedTransaction);
+    return updatedTransaction;
+  }
+  
+  async deleteTransaction(id: number): Promise<boolean> {
+    return this.transactions.delete(id);
+  }
+  
+  async getTransactionsByDateRange(userId: number, startDate: Date, endDate: Date): Promise<Transaction[]> {
+    return Array.from(this.transactions.values()).filter(
+      (transaction) => 
+        transaction.userId === userId && 
+        transaction.date >= startDate && 
+        transaction.date <= endDate
+    );
+  }
+  
+  async getTransactionsByCategory(userId: number, category: string): Promise<Transaction[]> {
+    return Array.from(this.transactions.values()).filter(
+      (transaction) => transaction.userId === userId && transaction.category === category
+    );
+  }
+  
+  async getTransactionsByBudgetMonth(userId: number, month: number, year: number): Promise<Transaction[]> {
+    return Array.from(this.transactions.values()).filter(
+      (transaction) => 
+        transaction.userId === userId && 
+        transaction.budgetMonth === month && 
+        transaction.budgetYear === year
+    );
+  }
+  
+  async getTransactionByImportHash(importHash: string): Promise<Transaction | undefined> {
+    return Array.from(this.transactions.values()).find(
+      (transaction) => transaction.importHash === importHash
+    );
   }
 }
 

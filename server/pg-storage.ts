@@ -7,7 +7,8 @@ import {
   savingsGoals, type SavingsGoal, type InsertSavingsGoal,
   investments, type Investment, type InsertInvestment,
   sharedAccess, type SharedAccess, type InsertSharedAccess,
-  invitations, type Invitation, type InsertInvitation
+  invitations, type Invitation, type InsertInvitation,
+  transactions, type Transaction, type InsertTransaction
 } from "@shared/schema";
 import { IStorage } from './storage';
 import session from "express-session";
@@ -499,6 +500,180 @@ export class PgStorage implements IStorage {
       [id.toString()]
     );
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  // Transaction methods
+  async getTransactions(userId: number): Promise<Transaction[]> {
+    const result = await pool.query(
+      'SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC',
+      [userId]
+    );
+    return result.rows;
+  }
+  
+  async getTransactionById(id: number): Promise<Transaction | undefined> {
+    const result = await pool.query(
+      'SELECT * FROM transactions WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] || undefined;
+  }
+  
+  async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
+    const { 
+      userId, 
+      date, 
+      type, 
+      amount, 
+      category, 
+      subcategory, 
+      description, 
+      frequency, 
+      notes, 
+      recurring,
+      budgetMonth,
+      budgetYear,
+      paymentMethod,
+      balance,
+      reference,
+      importHash 
+    } = transaction;
+    
+    const result = await pool.query(
+      `INSERT INTO transactions (
+        user_id, date, type, amount, category, subcategory, description, 
+        frequency, notes, recurring, budget_month, budget_year, payment_method, 
+        balance, reference, import_hash, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()) RETURNING *`,
+      [
+        userId, date, type, amount, category, subcategory, description, 
+        frequency, notes, recurring, budgetMonth, budgetYear, paymentMethod,
+        balance, reference, importHash
+      ]
+    );
+    return result.rows[0];
+  }
+  
+  async createManyTransactions(transactions: InsertTransaction[]): Promise<Transaction[]> {
+    const createdTransactions: Transaction[] = [];
+    
+    // Use a transaction to insert all transactions
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      for (const transaction of transactions) {
+        const result = await client.query(
+          `INSERT INTO transactions (
+            user_id, date, type, amount, category, subcategory, description, 
+            frequency, notes, recurring, budget_month, budget_year, payment_method, 
+            balance, reference, import_hash, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()) RETURNING *`,
+          [
+            transaction.userId, 
+            transaction.date, 
+            transaction.type, 
+            transaction.amount, 
+            transaction.category, 
+            transaction.subcategory, 
+            transaction.description, 
+            transaction.frequency, 
+            transaction.notes, 
+            transaction.recurring,
+            transaction.budgetMonth,
+            transaction.budgetYear,
+            transaction.paymentMethod,
+            transaction.balance,
+            transaction.reference,
+            transaction.importHash
+          ]
+        );
+        createdTransactions.push(result.rows[0]);
+      }
+      
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+    
+    return createdTransactions;
+  }
+  
+  async updateTransaction(id: number, transactionUpdate: Partial<InsertTransaction>): Promise<Transaction | undefined> {
+    // Build dynamic update query
+    const setFields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    // Add each field to the update
+    for (const [key, value] of Object.entries(transactionUpdate)) {
+      if (value !== undefined) {
+        const columnName = this.camelToSnakeCase(key);
+        setFields.push(`${columnName} = $${paramIndex++}`);
+        values.push(value);
+      }
+    }
+
+    if (setFields.length === 0) {
+      // Nothing to update
+      return this.getTransactionById(id);
+    }
+
+    // Add id as the last parameter
+    values.push(id);
+    
+    const query = `
+      UPDATE transactions 
+      SET ${setFields.join(', ')} 
+      WHERE id = $${paramIndex} 
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, values);
+    return result.rows[0] || undefined;
+  }
+  
+  async deleteTransaction(id: number): Promise<boolean> {
+    const result = await pool.query(
+      'DELETE FROM transactions WHERE id = $1',
+      [id.toString()]
+    );
+    return result.rowCount !== null && result.rowCount > 0;
+  }
+  
+  async getTransactionsByDateRange(userId: number, startDate: Date, endDate: Date): Promise<Transaction[]> {
+    const result = await pool.query(
+      'SELECT * FROM transactions WHERE user_id = $1 AND date >= $2 AND date <= $3 ORDER BY date DESC',
+      [userId, startDate.toISOString(), endDate.toISOString()]
+    );
+    return result.rows;
+  }
+  
+  async getTransactionsByCategory(userId: number, category: string): Promise<Transaction[]> {
+    const result = await pool.query(
+      'SELECT * FROM transactions WHERE user_id = $1 AND category = $2 ORDER BY date DESC',
+      [userId, category]
+    );
+    return result.rows;
+  }
+  
+  async getTransactionsByBudgetMonth(userId: number, month: number, year: number): Promise<Transaction[]> {
+    const result = await pool.query(
+      'SELECT * FROM transactions WHERE user_id = $1 AND budget_month = $2 AND budget_year = $3 ORDER BY date DESC',
+      [userId, month, year]
+    );
+    return result.rows;
+  }
+  
+  async getTransactionByImportHash(importHash: string): Promise<Transaction | undefined> {
+    const result = await pool.query(
+      'SELECT * FROM transactions WHERE import_hash = $1',
+      [importHash]
+    );
+    return result.rows[0] || undefined;
   }
 
   // Helper method to convert camelCase to snake_case for PostgreSQL columns
