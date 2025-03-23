@@ -393,7 +393,7 @@ export function CategoryManagement() {
     setEditedSubcategory(SUB_CATEGORIES[category][0]);
   };
 
-  const isMobile = useIsMobile();
+  const isMobileState = useIsMobile();
 
   return (
     <Card className="w-full">
