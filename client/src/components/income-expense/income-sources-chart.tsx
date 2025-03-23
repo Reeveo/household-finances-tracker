@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ModalForm } from "@/components/common/modal-form";
 
 // Sample data
@@ -17,6 +17,17 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 export function IncomeSourcesChart() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showSimpleView, setShowSimpleView] = useState(window.innerWidth < 640);
+
+  // Update view mode when window resizes
+  useEffect(() => {
+    const handleResize = () => {
+      setShowSimpleView(window.innerWidth < 640);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -32,32 +43,78 @@ export function IncomeSourcesChart() {
     return null;
   };
 
+  // Calculate total income
+  const totalIncome = incomeData.reduce((sum, entry) => sum + entry.value, 0);
+
   return (
     <Card className="shadow-sm">
-      <CardContent className="p-5">
-        <h3 className="text-lg font-semibold mb-4">Income Sources</h3>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={incomeData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-              >
-                {incomeData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      <CardContent className="p-3 sm:p-5">
+        <h3 className="text-lg font-semibold mb-2 sm:mb-4">Income Sources</h3>
+        
+        {showSimpleView ? (
+          // Mobile-optimized view with simple percentage bars
+          <div className="space-y-3 mb-3">
+            {incomeData.map((entry, index) => {
+              const percentage = (entry.value / totalIncome) * 100;
+              return (
+                <div key={`income-${index}`} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <div className="flex items-center">
+                      <span 
+                        className="inline-block w-3 h-3 rounded-full mr-2" 
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <span>{entry.name}</span>
+                    </div>
+                    <div className="flex space-x-2">
+                      <span className="text-gray-500">{percentage.toFixed(1)}%</span>
+                      <span>£{entry.value}</span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="h-2 rounded-full" 
+                      style={{ 
+                        width: `${percentage}%`,
+                        backgroundColor: COLORS[index % COLORS.length] 
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            <div className="mt-3 pt-2 border-t border-gray-200">
+              <div className="flex justify-between font-medium">
+                <span>Total Income</span>
+                <span>£{totalIncome}</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Desktop view with pie chart
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={incomeData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {incomeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
         <div className="mt-4">
           <Button 
             variant="default" 
