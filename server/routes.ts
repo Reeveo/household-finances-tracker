@@ -801,6 +801,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint for bulk updating transactions (particularly for categorization)
+  app.patch("/api/transactions/bulk", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { ids, category, subcategory } = req.body;
+      
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: "Transaction IDs array is required" });
+      }
+      
+      if (!category) {
+        return res.status(400).json({ message: "Category is required for bulk update" });
+      }
+      
+      // Validate each transaction ID and update if authorized
+      const results = {
+        successful: [],
+        failed: [],
+        unauthorized: []
+      };
+      
+      for (const id of ids) {
+        try {
+          const transactionId = parseInt(id.toString(), 10);
+          if (isNaN(transactionId)) {
+            results.failed.push({ id, reason: "Invalid ID format" });
+            continue;
+          }
+          
+          const existingTransaction = await storage.getTransactionById(transactionId);
+          if (!existingTransaction) {
+            results.failed.push({ id, reason: "Transaction not found" });
+            continue;
+          }
+          
+          // Check if user owns the transaction or has edit access
+          let hasEditAccess = false;
+          
+          if (existingTransaction.userId === userId) {
+            hasEditAccess = true;
+          } else {
+            // Check if user has edit access to this transaction via shared access
+            const access = await hasAccessToUserData(userId, existingTransaction.userId);
+            if (access.hasAccess && access.accessLevel === "edit") {
+              hasEditAccess = true;
+            }
+          }
+          
+          if (!hasEditAccess) {
+            results.unauthorized.push({ id });
+            continue;
+          }
+          
+          // Update the transaction with new category/subcategory
+          const updateData = { 
+            category,
+            subcategory: subcategory === null ? null : subcategory
+          };
+          
+          const updatedTransaction = await storage.updateTransaction(transactionId, updateData);
+          results.successful.push(updatedTransaction);
+        } catch (error) {
+          console.error(`Error updating transaction ${id}:`, error);
+          results.failed.push({ id, reason: "Server error" });
+        }
+      }
+      
+      // Return results summary
+      res.json({
+        message: `Updated ${results.successful.length} of ${ids.length} transactions`,
+        results
+      });
+    } catch (error) {
+      console.error("Error in bulk update transactions:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   app.put("/api/transactions/:id", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;

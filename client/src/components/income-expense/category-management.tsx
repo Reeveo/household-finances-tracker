@@ -579,8 +579,8 @@ export function CategoryManagement() {
                           {transaction.description}
                         </TableCell>
                         <TableCell>
-                          <span className={transaction.amount >= 0 ? "text-green-600" : "text-red-600"}>
-                            {transaction.amount >= 0 ? "+" : ""}£{Math.abs(parseFloat(transaction.amount.toString())).toFixed(2)}
+                          <span className={parseFloat(transaction.amount.toString()) >= 0 ? "text-green-600" : "text-red-600"}>
+                            {parseFloat(transaction.amount.toString()) >= 0 ? "+" : ""}£{Math.abs(parseFloat(transaction.amount.toString())).toFixed(2)}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -920,12 +920,12 @@ export function CategoryManagement() {
               <div className="col-span-3">
                 <span
                   className={
-                    selectedTransaction && selectedTransaction.amount >= 0
+                    selectedTransaction && parseFloat(selectedTransaction.amount.toString()) >= 0
                       ? "text-green-600"
                       : "text-red-600"
                   }
                 >
-                  {selectedTransaction && selectedTransaction.amount >= 0 ? "+" : "-"}£
+                  {selectedTransaction && parseFloat(selectedTransaction.amount.toString()) >= 0 ? "+" : "-"}£
                   {selectedTransaction &&
                     Math.abs(parseFloat(selectedTransaction.amount.toString())).toFixed(2)}
                 </span>

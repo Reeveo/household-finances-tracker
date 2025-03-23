@@ -3,10 +3,18 @@ import { IncomeSourcesChart } from "@/components/income-expense/income-sources-c
 import { ExpenseChart } from "@/components/income-expense/expense-chart";
 import { BudgetTracking } from "@/components/income-expense/budget-tracking";
 import { TransactionManagement } from "@/components/income-expense/transaction-management";
+import { CategoryManagement } from "@/components/income-expense/category-management";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CSVImport } from "@/components/income-expense/csv-import";
+import { useEffect } from "react";
+import { initCategorizationEngine } from "@/lib/utils/categorization";
 
 export default function IncomeExpensePage() {
+  // Initialize categorization engine when page loads
+  useEffect(() => {
+    initCategorizationEngine();
+  }, []);
+  
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -16,9 +24,10 @@ export default function IncomeExpensePage() {
           <h1 className="text-2xl font-bold tracking-tight">Income & Expense Tracker</h1>
           
           <Tabs defaultValue="dashboard" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsList className="grid w-full max-w-md grid-cols-4">
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="transactions">Transactions</TabsTrigger>
+              <TabsTrigger value="categories">Categories</TabsTrigger>
               <TabsTrigger value="import">Import</TabsTrigger>
             </TabsList>
             
@@ -36,6 +45,11 @@ export default function IncomeExpensePage() {
             <TabsContent value="transactions" className="mt-6">
               {/* Transaction Management */}
               <TransactionManagement />
+            </TabsContent>
+            
+            <TabsContent value="categories" className="mt-6">
+              {/* Category Management */}
+              <CategoryManagement />
             </TabsContent>
             
             <TabsContent value="import" className="mt-6">
