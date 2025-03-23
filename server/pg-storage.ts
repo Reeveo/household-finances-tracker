@@ -531,6 +531,9 @@ export class PgStorage implements IStorage {
       frequency, 
       notes, 
       isRecurring,
+      hasEndDate,
+      endDate,
+      nextDueDate,
       budgetMonth,
       budgetYear,
       paymentMethod,
@@ -542,12 +545,14 @@ export class PgStorage implements IStorage {
     const result = await pool.query(
       `INSERT INTO transactions (
         user_id, date, type, amount, category, subcategory, description, 
-        frequency, notes, is_recurring, budget_month, budget_year, payment_method, 
+        frequency, notes, is_recurring, has_end_date, end_date, next_due_date, 
+        budget_month, budget_year, payment_method, 
         balance, reference, import_hash, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()) RETURNING *`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW()) RETURNING *`,
       [
         userId, date, type, amount, category, subcategory, description, 
-        frequency, notes, isRecurring, budgetMonth, budgetYear, paymentMethod,
+        frequency, notes, isRecurring, hasEndDate, endDate, nextDueDate,
+        budgetMonth, budgetYear, paymentMethod,
         balance, reference, importHash
       ]
     );
@@ -566,9 +571,10 @@ export class PgStorage implements IStorage {
         const result = await client.query(
           `INSERT INTO transactions (
             user_id, date, type, amount, category, subcategory, description, 
-            frequency, notes, is_recurring, budget_month, budget_year, payment_method, 
+            frequency, notes, is_recurring, has_end_date, end_date, next_due_date, 
+            budget_month, budget_year, payment_method, 
             balance, reference, import_hash, created_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()) RETURNING *`,
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW()) RETURNING *`,
           [
             transaction.userId, 
             transaction.date, 
@@ -580,6 +586,9 @@ export class PgStorage implements IStorage {
             transaction.frequency, 
             transaction.notes, 
             transaction.isRecurring,
+            transaction.hasEndDate,
+            transaction.endDate,
+            transaction.nextDueDate,
             transaction.budgetMonth,
             transaction.budgetYear,
             transaction.paymentMethod,
