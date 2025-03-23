@@ -210,7 +210,7 @@ export function TransactionAnalytics() {
       if (transaction.amount < 0) {
         acc.expenses += Math.abs(transaction.amount);
       } else {
-        acc.income += transaction.amount;
+        acc.income += Number(transaction.amount);
       }
       return acc;
     }, { expenses: 0, income: 0 });
@@ -693,13 +693,17 @@ export function TransactionAnalytics() {
               <Card>
                 <CardContent className="p-4">
                   <div className="text-sm font-medium text-muted-foreground mb-1">Total Income</div>
-                  <div className="text-2xl font-bold text-green-500">£{income.toFixed(2)}</div>
+                  <div className="text-2xl font-bold text-green-500">£{Number(income).toFixed(2)}</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-4">
                   <div className="text-sm font-medium text-muted-foreground mb-1">Avg. Transaction</div>
-                  <div className="text-2xl font-bold">£{(expenses / filteredTransactions.filter(t => t.amount < 0).length).toFixed(2)}</div>
+                  <div className="text-2xl font-bold">£{
+                    (filteredTransactions.filter(t => t.amount < 0).length > 0) ? 
+                      (expenses / filteredTransactions.filter(t => t.amount < 0).length).toFixed(2) : 
+                      (0).toFixed(2)
+                  }</div>
                 </CardContent>
               </Card>
             </div>
