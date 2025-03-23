@@ -244,6 +244,8 @@ type Transaction = {
   paymentMethod: string;
   isRecurring: boolean;
   frequency?: string;
+  hasEndDate?: boolean;
+  endDate?: string;
   budgetMonth: string;
   notes: string;
 };
@@ -267,6 +269,7 @@ export function TransactionManagement() {
       subcategory: "",
       paymentMethod: "Debit Card",
       isRecurring: false,
+      hasEndDate: false,
       budgetMonth: "current",
       notes: "",
     }
@@ -284,7 +287,8 @@ export function TransactionManagement() {
   // Set form values when editing a transaction
   const handleEditTransaction = (transaction: Transaction) => {
     setEditingTransaction(transaction);
-    form.reset({
+    
+    const formData: any = {
       description: transaction.description,
       merchant: transaction.merchant,
       date: new Date(transaction.date),
@@ -294,9 +298,17 @@ export function TransactionManagement() {
       paymentMethod: transaction.paymentMethod,
       isRecurring: transaction.isRecurring,
       frequency: transaction.frequency,
+      hasEndDate: transaction.hasEndDate || false,
       budgetMonth: transaction.budgetMonth,
       notes: transaction.notes,
-    });
+    };
+    
+    // Add endDate if it exists
+    if (transaction.endDate) {
+      formData.endDate = new Date(transaction.endDate);
+    }
+    
+    form.reset(formData);
     setShowAddDialog(true);
   };
 
@@ -322,6 +334,10 @@ export function TransactionManagement() {
               paymentMethod: data.paymentMethod || 'Debit Card',
               isRecurring: data.isRecurring,
               frequency: data.isRecurring ? data.frequency : undefined,
+              hasEndDate: data.isRecurring ? data.hasEndDate : false,
+              endDate: (data.isRecurring && data.hasEndDate && data.endDate) 
+                ? data.endDate.toISOString().split('T')[0] 
+                : undefined,
               budgetMonth: data.budgetMonth,
               notes: data.notes || '',
             } 
@@ -341,6 +357,10 @@ export function TransactionManagement() {
         paymentMethod: data.paymentMethod || 'Debit Card',
         isRecurring: data.isRecurring,
         frequency: data.isRecurring ? data.frequency : undefined,
+        hasEndDate: data.isRecurring ? data.hasEndDate : false,
+        endDate: (data.isRecurring && data.hasEndDate && data.endDate) 
+          ? data.endDate.toISOString().split('T')[0] 
+          : undefined,
         merchantLogo: '',
         budgetMonth: data.budgetMonth,
         notes: data.notes || '',
@@ -771,30 +791,94 @@ export function TransactionManagement() {
               />
 
               {form.watch('isRecurring') && (
-                <FormField
-                  control={form.control}
-                  name="frequency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Frequency</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                <>
+                  <FormField
+                    control={form.control}
+                    name="frequency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Frequency</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select frequency" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Daily">Daily</SelectItem>
+                            <SelectItem value="Weekly">Weekly</SelectItem>
+                            <SelectItem value="Monthly">Monthly</SelectItem>
+                            <SelectItem value="Quarterly">Quarterly</SelectItem>
+                            <SelectItem value="Annually">Annually</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="hasEndDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select frequency" />
-                          </SelectTrigger>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="Daily">Daily</SelectItem>
-                          <SelectItem value="Weekly">Weekly</SelectItem>
-                          <SelectItem value="Monthly">Monthly</SelectItem>
-                          <SelectItem value="Quarterly">Quarterly</SelectItem>
-                          <SelectItem value="Annually">Annually</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Has End Date</FormLabel>
+                          <FormDescription>
+                            Specify if this recurring transaction has an end date
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch('hasEndDate') && (
+                    <FormField
+                      control={form.control}
+                      name="endDate"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>End Date</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant={"outline"}
+                                  className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, "PPP")
+                                  ) : (
+                                    <span>Pick an end date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <CalendarComponent
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </>
               )}
 
               {/* Optional Details */}
