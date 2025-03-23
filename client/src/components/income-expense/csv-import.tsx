@@ -68,7 +68,11 @@ import { Progress } from "@/components/ui/progress";
 import { 
   CATEGORIES, 
   SUB_CATEGORIES, 
-  suggestCategory as suggestCategoryWithConfidence,
+  suggestCategory,
+  calculateConfidenceScore,
+  findSimilarTransactions,
+  applyCategoryToSimilar as applyCategoryToSimilarTransactions,
+  learnFromCorrection
 } from "@/lib/utils/categorization";
 
 // Column Mapper Type
@@ -286,6 +290,14 @@ function createTransactionId(transaction: Partial<BankTransaction>): string {
   return `${date}_${desc}_${amount}`.replace(/\s+/g, '_');
 }
 
+// Helper function to create a suggester that returns an object with category, subcategory, and confidence
+function suggestCategoryWithConfidence(description: string, amount: number) {
+  const category = suggestCategory(description);
+  const subcategory = SUB_CATEGORIES[category].length > 0 ? SUB_CATEGORIES[category][0] : '';
+  const confidence = calculateConfidenceScore(description, category, subcategory);
+  return { category, subcategory, confidence };
+}
+
 // Month options for budget assignment
 const BUDGET_MONTHS = [
   { value: "current", label: "Current Month (June 2023)" },
@@ -481,7 +493,11 @@ export function CSVImport() {
           const normalizedDate = normalizeDate(dateValue, currentBankFormat.dateFormat);
           
           // Auto-categorize based on transaction description using our advanced categorization engine
-          const { category: suggestedCategory, subcategory: suggestedSubcategory } = suggestCategoryWithConfidence(description, amount);
+          const suggestedCategory = suggestCategory(description);
+          // Get suggested subcategory for this category
+          const suggestedSubcategory = SUB_CATEGORIES[suggestedCategory].length > 0 
+            ? SUB_CATEGORIES[suggestedCategory][0] 
+            : '';
           
           // Create transaction object
           const transaction: BankTransaction = {
@@ -584,14 +600,22 @@ export function CSVImport() {
   const handleCategoryChange = (index: number, category: string) => {
     const newData = [...csvData];
     newData[index].category = category;
-    // Update subcategory based on new category using the advanced categorization engine
-    const result = suggestCategoryWithConfidence(
-      newData[index].description, 
-      newData[index].amount
-    );
-    // Override with the category the user selected, but keep the suggested subcategory
-    const subcategory = SUB_CATEGORIES[category][0];
+    
+    // Select the first subcategory from the available subcategories for this category
+    const subcategory = SUB_CATEGORIES[category].length > 0 
+      ? SUB_CATEGORIES[category][0] 
+      : '';
     newData[index].subcategory = subcategory;
+    
+    // Log this as a learning event for the categorization engine
+    learnFromCorrection(
+      newData[index].description,
+      'unknown', // Original category (unknown since it's being changed)
+      'unknown', // Original subcategory
+      category,  // New category that user selected
+      subcategory // New subcategory we're assigning
+    );
+    
     setCsvData(newData);
   };
   
@@ -614,43 +638,54 @@ export function CSVImport() {
     const sourceTransaction = csvData[index];
     const newData = [...csvData];
     
-    // Import the more sophisticated similar transaction finder from our categorization engine
-    import("@/lib/utils/categorization").then(({ findSimilarTransactions, applyCategoryToSimilar }) => {
-      // Find similar transactions
-      const similarTransactions = findSimilarTransactions(
-        sourceTransaction.description, 
-        newData
-      );
+    // Find similar transactions with basic string matching
+    const categoryToApply = sourceTransaction.category;
+    const subcategoryToApply = sourceTransaction.subcategory;
+    const sourceDesc = sourceTransaction.description.toLowerCase();
+    let changedCount = 0;
+    
+    // Apply to similar transactions
+    newData.forEach((transaction, idx) => {
+      // Skip the source transaction
+      if (idx === index) return;
       
-      // Apply the same category and subcategory to similar transactions
-      const updatedTransactions = applyCategoryToSimilar(
-        sourceTransaction,
-        newData
-      );
+      const targetDesc = transaction.description.toLowerCase();
       
-      // Count the number of changes
-      const changedCount = updatedTransactions.filter((t, i) => 
-        t.category !== newData[i].category || t.subcategory !== newData[i].subcategory
-      ).length - 1; // Subtract 1 as the source transaction is counted
-      
-      setCsvData(updatedTransactions);
-      
-      // Learn from this categorization for future suggestions
-      import("@/lib/utils/categorization").then(({ learnFromCorrection }) => {
-        learnFromCorrection(
-          sourceTransaction.description,
-          "unknown", // Original category is unknown as it's user-applied
-          "unknown", // Original subcategory is unknown as it's user-applied
-          sourceTransaction.category,
-          sourceTransaction.subcategory
-        );
-      });
-      
-      toast({
-        title: "Categories updated",
-        description: `Applied "${sourceTransaction.category} > ${sourceTransaction.subcategory}" to ${changedCount} similar transaction(s)`,
-        variant: "default"
-      });
+      // Find similarity using basic matching
+      // To save this step, we could use our advanced ML text similarity here
+      if (sourceDesc.includes(targetDesc) || 
+          targetDesc.includes(sourceDesc) ||
+          // Simple vendor name matching
+          (sourceDesc.split(' ')[0] === targetDesc.split(' ')[0])) {
+        
+        // If we're making a change, count it
+        if (transaction.category !== categoryToApply || 
+            transaction.subcategory !== subcategoryToApply) {
+          changedCount++;
+        }
+        
+        // Apply the new category
+        transaction.category = categoryToApply;
+        transaction.subcategory = subcategoryToApply;
+      }
+    });
+    
+    // Update state with all changes
+    setCsvData(newData);
+    
+    // Learn from this categorization for future suggestions
+    learnFromCorrection(
+      sourceTransaction.description,
+      "unknown", // Original category is unknown as it's user-applied
+      "unknown", // Original subcategory is unknown as it's user-applied
+      sourceTransaction.category,
+      sourceTransaction.subcategory
+    );
+    
+    toast({
+      title: "Categories updated",
+      description: `Applied "${sourceTransaction.category} > ${sourceTransaction.subcategory}" to ${changedCount} similar transaction(s)`,
+      variant: "default"
     });
   };
   
