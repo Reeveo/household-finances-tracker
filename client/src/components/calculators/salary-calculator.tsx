@@ -578,10 +578,21 @@ export function SalaryCalculator() {
     }
   };
   
+  // On mount, calculate the default salary
+  useEffect(() => {
+    handleCalculate();
+  }, []);
+  
   return (
     <Card className="shadow-sm">
       <CardHeader>
-        <CardTitle>Salary Calculator</CardTitle>
+        <CardTitle className="flex items-center">
+          <Calculator className="mr-2 h-5 w-5" />
+          UK Salary Calculator
+        </CardTitle>
+        <CardDescription>
+          Calculate take-home pay with the latest {selectedTaxYear} tax rates and thresholds
+        </CardDescription>
       </CardHeader>
       <CardContent className="p-5">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -594,108 +605,299 @@ export function SalaryCalculator() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Input Section */}
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="annualSalary">Annual Salary (£)</Label>
-                    <Input
-                      id="annualSalary"
-                      type="number"
-                      value={salary.annualSalary}
-                      onChange={(e) => handleSalaryChange('annualSalary', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="taxCode">Tax Code</Label>
-                    <Input
-                      id="taxCode"
-                      type="text"
-                      value={salary.taxCode}
-                      onChange={(e) => handleSalaryChange('taxCode', e.target.value)}
-                    />
-                  </div>
+                {/* Tax Year Selection */}
+                <div className="mb-4">
+                  <Select
+                    value={salary.taxYear}
+                    onValueChange={(value) => handleSalaryChange('taxYear', value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select tax year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Tax Year</SelectLabel>
+                        <SelectItem value={TaxYear.Y2024_2025}>2024-2025 (Current)</SelectItem>
+                        <SelectItem value={TaxYear.Y2023_2024}>2023-2024 (Previous)</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 </div>
                 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Pension Contribution</Label>
-                    <div className="flex items-center space-x-2">
-                      <Label>£</Label>
-                      <Switch
-                        checked={salary.usePensionPercent}
-                        onCheckedChange={(checked) => handleSalaryChange('usePensionPercent', checked)}
+                {/* Salary and Payment Frequency */}
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="annualSalary">Annual Salary</Label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                      <Input
+                        id="annualSalary"
+                        type="number"
+                        className="pl-8"
+                        value={salary.annualSalary}
+                        onChange={(e) => handleSalaryChange('annualSalary', e.target.value)}
                       />
-                      <Label>%</Label>
                     </div>
                   </div>
                   
-                  {salary.usePensionPercent ? (
-                    <Input
-                      type="number"
-                      value={salary.pensionPercent}
-                      onChange={(e) => handleSalaryChange('pensionPercent', e.target.value)}
-                    />
-                  ) : (
-                    <Input
-                      type="number"
-                      value={salary.pensionAmount}
-                      onChange={(e) => handleSalaryChange('pensionAmount', e.target.value)}
-                    />
-                  )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="salaryFrequency">Payment Frequency</Label>
+                      <Select
+                        value={salary.salaryFrequency}
+                        onValueChange={(value) => handleSalaryChange('salaryFrequency', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select frequency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_FREQUENCIES.map((freq) => (
+                            <SelectItem key={freq.value} value={freq.value}>
+                              {freq.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="taxCode">Tax Code</Label>
+                      <div className="relative">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute inset-y-0 right-0 h-full"
+                              >
+                                <HelpCircle className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent className="w-80 p-2">
+                              <div className="space-y-2">
+                                <h4 className="font-medium">Common UK Tax Codes</h4>
+                                <ul className="space-y-1 text-xs">
+                                  {COMMON_TAX_CODES.map(code => (
+                                    <li key={code.code} className="flex justify-between">
+                                      <span className="font-semibold">{code.code}</span>
+                                      <span>{code.description}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <Input
+                          id="taxCode"
+                          type="text"
+                          value={salary.taxCode}
+                          className="pr-8"
+                          onChange={(e) => handleSalaryChange('taxCode', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 
+                {/* Pension Settings */}
+                <Card className="border-dashed border-muted">
+                  <CardHeader className="p-3 pb-1">
+                    <CardTitle className="text-md flex items-center">
+                      <PiggyBank className="mr-2 h-4 w-4" />
+                      Pension Contribution
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3 pt-0 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Select
+                        value={salary.pensionScheme}
+                        onValueChange={(value) => handleSalaryChange('pensionScheme', value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Pension scheme" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PENSION_SCHEMES.map((scheme) => (
+                            <SelectItem key={scheme.value} value={scheme.value}>
+                              {scheme.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      <div className="flex items-center space-x-2 ml-2">
+                        <Label>£</Label>
+                        <Switch
+                          checked={salary.usePensionPercent}
+                          onCheckedChange={(checked) => handleSalaryChange('usePensionPercent', checked)}
+                        />
+                        <Label>%</Label>
+                      </div>
+                    </div>
+                    
+                    {salary.usePensionPercent ? (
+                      <div className="relative">
+                        <span className="absolute inset-y-0 right-3 flex items-center text-gray-500">%</span>
+                        <Input
+                          type="number"
+                          value={salary.pensionPercent}
+                          onChange={(e) => handleSalaryChange('pensionPercent', e.target.value)}
+                        />
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                        <Input
+                          type="number"
+                          className="pl-8"
+                          value={salary.pensionAmount}
+                          onChange={(e) => handleSalaryChange('pensionAmount', e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                
+                {/* Student Loan */}
+                <Card className="border-dashed border-muted">
+                  <CardHeader className="p-3 pb-1">
+                    <CardTitle className="text-md flex items-center">
+                      <TrendingUp className="mr-2 h-4 w-4" />
+                      Student Loan
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3 pt-0 space-y-3">
+                    <Select
+                      value={salary.studentLoan}
+                      onValueChange={(value) => handleSalaryChange('studentLoan', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Student loan plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STUDENT_LOAN_TYPES.map((plan) => (
+                          <SelectItem key={plan.value} value={plan.value}>
+                            {plan.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="hasPostgraduateLoan"
+                        checked={salary.hasPostgraduateLoan}
+                        onCheckedChange={(checked) => handleSalaryChange('hasPostgraduateLoan', checked)}
+                      />
+                      <Label htmlFor="hasPostgraduateLoan">
+                        Postgraduate Loan
+                      </Label>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                {/* Additional Income & Benefits */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="yearlyBonus">Yearly Bonus (£)</Label>
-                    <Input
-                      id="yearlyBonus"
-                      type="number"
-                      value={salary.yearlyBonus}
-                      onChange={(e) => handleSalaryChange('yearlyBonus', e.target.value)}
-                    />
+                    <Label htmlFor="yearlyBonus">Yearly Bonus</Label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                      <Input
+                        id="yearlyBonus"
+                        type="number"
+                        className="pl-8"
+                        value={salary.yearlyBonus}
+                        onChange={(e) => handleSalaryChange('yearlyBonus', e.target.value)}
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="taxableBenefits">Taxable Benefits (£)</Label>
-                    <Input
-                      id="taxableBenefits"
-                      type="number"
-                      value={salary.taxableBenefits}
-                      onChange={(e) => handleSalaryChange('taxableBenefits', e.target.value)}
-                    />
+                    <Label htmlFor="taxableBenefits">Taxable Benefits</Label>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                      <Input
+                        id="taxableBenefits"
+                        type="number"
+                        className="pl-8"
+                        value={salary.taxableBenefits}
+                        onChange={(e) => handleSalaryChange('taxableBenefits', e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="cashAllowances">Cash Allowances (£)</Label>
-                  <Input
-                    id="cashAllowances"
-                    type="number"
-                    value={salary.cashAllowances}
-                    onChange={(e) => handleSalaryChange('cashAllowances', e.target.value)}
-                  />
+                  <Label htmlFor="cashAllowances">Cash Allowances</Label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                    <Input
+                      id="cashAllowances"
+                      type="number"
+                      className="pl-8"
+                      value={salary.cashAllowances}
+                      onChange={(e) => handleSalaryChange('cashAllowances', e.target.value)}
+                    />
+                  </div>
                 </div>
                 
+                {/* Deductions */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="preDeductions">Pre-Tax Deductions (£)</Label>
-                    <Input
-                      id="preDeductions"
-                      type="number"
-                      value={salary.preDeductions}
-                      onChange={(e) => handleSalaryChange('preDeductions', e.target.value)}
-                    />
+                    <div className="flex items-center space-x-1">
+                      <Label htmlFor="preDeductions">Pre-Tax Deductions</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="w-[200px] text-xs">Deductions made before tax calculation, such as salary sacrifice schemes</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                      <Input
+                        id="preDeductions"
+                        type="number"
+                        className="pl-8"
+                        value={salary.preDeductions}
+                        onChange={(e) => handleSalaryChange('preDeductions', e.target.value)}
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="postDeductions">Post-Tax Deductions (£)</Label>
-                    <Input
-                      id="postDeductions"
-                      type="number"
-                      value={salary.postDeductions}
-                      onChange={(e) => handleSalaryChange('postDeductions', e.target.value)}
-                    />
+                    <div className="flex items-center space-x-1">
+                      <Label htmlFor="postDeductions">Post-Tax Deductions</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="w-[200px] text-xs">Deductions made after tax calculation, such as season ticket loans</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <div className="relative">
+                      <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">£</span>
+                      <Input
+                        id="postDeductions"
+                        type="number"
+                        className="pl-8"
+                        value={salary.postDeductions}
+                        onChange={(e) => handleSalaryChange('postDeductions', e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
                 
-                <Button onClick={handleCalculate} className="w-full">
+                <Button onClick={handleCalculate} className="w-full" size="lg">
+                  <Calculator className="mr-2 h-4 w-4" />
                   Calculate Salary
                 </Button>
               </div>
@@ -703,142 +905,366 @@ export function SalaryCalculator() {
               {/* Results Section */}
               {salaryResult && (
                 <div className="space-y-4">
+                  {/* Period and Annual Summary Cards */}
                   <div className="grid grid-cols-2 gap-4">
-                    <Card className="bg-gray-50">
+                    <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
                       <CardContent className="p-4">
-                        <h3 className="text-sm font-medium text-gray-500">Monthly Take-Home</h3>
-                        <div className="text-2xl font-bold mt-1">{formatCurrency(salaryResult.monthlyTakeHome)}</div>
+                        <h3 className="text-sm font-medium text-gray-600">
+                          {salary.salaryFrequency === "monthly" ? "Monthly" : 
+                           salary.salaryFrequency === "weekly" ? "Weekly" :
+                           salary.salaryFrequency === "fourWeekly" ? "Four-Weekly" :
+                           salary.salaryFrequency === "daily" ? "Daily" : "Hourly"} Take-Home
+                        </h3>
+                        <div className="text-3xl font-bold mt-1 text-blue-700">{formatCurrency(salaryResult.periodTakeHome)}</div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formatPercentage(salaryResult.effectiveTaxRate)} effective tax rate
+                        </p>
                       </CardContent>
                     </Card>
                     
-                    <Card className="bg-gray-50">
+                    <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100">
                       <CardContent className="p-4">
-                        <h3 className="text-sm font-medium text-gray-500">Annual Take-Home</h3>
-                        <div className="text-2xl font-bold mt-1">{formatCurrency(salaryResult.annualTakeHome)}</div>
+                        <h3 className="text-sm font-medium text-gray-600">Annual Take-Home</h3>
+                        <div className="text-3xl font-bold mt-1 text-emerald-700">{formatCurrency(salaryResult.annualTakeHome)}</div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formatCurrency(salaryResult.annualGross)} gross per year
+                        </p>
                       </CardContent>
                     </Card>
                   </div>
                   
+                  {/* Breakdown Card */}
                   <Card>
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Annual Gross Salary:</span>
-                          <span className="font-medium">{formatCurrency(salaryResult.annualGross)}</span>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg flex items-center">
+                        <PoundSterling className="mr-2 h-5 w-5" />
+                        Salary Breakdown
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-4">
+                        {/* Salary and Tax Summary */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Gross Salary:</span>
+                            <span className="font-medium">{formatCurrency(salaryResult.annualGross)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Taxable Pay:</span>
+                            <span className="font-medium">{formatCurrency(salaryResult.annualTaxable)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Income Tax:</span>
+                            <span className="font-medium text-red-600">-{formatCurrency(salaryResult.incomeTax.total)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>National Insurance:</span>
+                            <span className="font-medium text-red-600">-{formatCurrency(salaryResult.nationalInsurance.total)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span>Pension Contribution:</span>
+                            <span className="font-medium text-blue-600">-{formatCurrency(salaryResult.pension.annualContribution)}</span>
+                          </div>
+                          
+                          {/* Student Loan Section */}
+                          {salaryResult.studentLoan && (
+                            <div className="flex justify-between text-sm">
+                              <span>Student Loan ({salaryResult.studentLoan.plan}):</span>
+                              <span className="font-medium text-red-600">-{formatCurrency(salaryResult.studentLoan.amount)}</span>
+                            </div>
+                          )}
+                          
+                          {salaryResult.postgraduateLoan && (
+                            <div className="flex justify-between text-sm">
+                              <span>Postgraduate Loan:</span>
+                              <span className="font-medium text-red-600">-{formatCurrency(salaryResult.postgraduateLoan.amount)}</span>
+                            </div>
+                          )}
+                          
+                          {/* Only show deductions if they exist */}
+                          {salary.postDeductions > 0 && (
+                            <div className="flex justify-between text-sm">
+                              <span>Post-Tax Deductions:</span>
+                              <span className="font-medium text-red-600">-{formatCurrency(salary.postDeductions)}</span>
+                            </div>
+                          )}
+                          
+                          <Separator />
+                          <div className="flex justify-between font-semibold">
+                            <span>Annual Take-Home Pay:</span>
+                            <span className="text-emerald-700">{formatCurrency(salaryResult.annualTakeHome)}</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Income Tax:</span>
-                          <span className="font-medium text-red-500">-{formatCurrency(salaryResult.incomeTax.total)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>National Insurance:</span>
-                          <span className="font-medium text-red-500">-{formatCurrency(salaryResult.nationalInsurance.total)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Pension Contribution:</span>
-                          <span className="font-medium text-blue-500">-{formatCurrency(salaryResult.pension.annualContribution)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span>Deductions:</span>
-                          <span className="font-medium text-red-500">-{formatCurrency(salary.postDeductions)}</span>
-                        </div>
-                        <Separator />
-                        <div className="flex justify-between font-semibold">
-                          <span>Annual Take-Home Pay:</span>
-                          <span>{formatCurrency(salaryResult.annualTakeHome)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm text-gray-500">
-                          <span>Effective Tax Rate:</span>
-                          <span>{formatPercentage(salaryResult.effectiveTaxRate)}</span>
+                        
+                        {/* Visualization of Split */}
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-medium">How Your Salary is Split</h3>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span>Take-Home Pay</span>
+                              <span>{formatPercentage((salaryResult.annualTakeHome / salaryResult.annualGross) * 100)}</span>
+                            </div>
+                            <Progress 
+                              value={(salaryResult.annualTakeHome / salaryResult.annualGross) * 100} 
+                              className="h-2 bg-gray-200"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span>Income Tax</span>
+                              <span>{formatPercentage((salaryResult.incomeTax.total / salaryResult.annualGross) * 100)}</span>
+                            </div>
+                            <Progress 
+                              value={(salaryResult.incomeTax.total / salaryResult.annualGross) * 100} 
+                              className="h-2 bg-red-200"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span>National Insurance</span>
+                              <span>{formatPercentage((salaryResult.nationalInsurance.total / salaryResult.annualGross) * 100)}</span>
+                            </div>
+                            <Progress 
+                              value={(salaryResult.nationalInsurance.total / salaryResult.annualGross) * 100} 
+                              className="h-2 bg-orange-200"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs">
+                              <span>Pension</span>
+                              <span>{formatPercentage((salaryResult.pension.annualContribution / salaryResult.annualGross) * 100)}</span>
+                            </div>
+                            <Progress 
+                              value={(salaryResult.pension.annualContribution / salaryResult.annualGross) * 100} 
+                              className="h-2 bg-blue-200"
+                            />
+                          </div>
+                          
+                          {/* Only show if student loan exists */}
+                          {(salaryResult.studentLoan || salaryResult.postgraduateLoan) && (
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span>Student Loan</span>
+                                <span>{formatPercentage((salaryResult.periodBreakdown.studentLoan * 12 / salaryResult.annualGross) * 100)}</span>
+                              </div>
+                              <Progress 
+                                value={(salaryResult.periodBreakdown.studentLoan * 12 / salaryResult.annualGross) * 100} 
+                                className="h-2 bg-purple-200"
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>
+                    <CardFooter className="pt-0 border-t flex justify-between">
+                      <div>
+                        <Badge variant="outline" className="mr-2">
+                          {salary.taxYear}
+                        </Badge>
+                        <Badge variant="outline">
+                          Tax Code: {salary.taxCode}
+                        </Badge>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={saveForComparison}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-1" />
+                          Save for Comparison
+                        </Button>
+                        <Button
+                          onClick={() => setShowDetails(!showDetails)}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                        >
+                          {showDetails ? (
+                            <>
+                              <ChevronUp className="h-3.5 w-3.5 mr-1" />
+                              Hide Details
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                              Show Details
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </CardFooter>
                   </Card>
                   
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setShowDetails(!showDetails)}
-                      className="flex items-center text-sm text-blue-600 hover:text-blue-800"
-                    >
-                      {showDetails ? (
-                        <>
-                          <ChevronUp className="h-4 w-4 mr-1" />
-                          Hide Detailed Breakdown
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown className="h-4 w-4 mr-1" />
-                          Show Detailed Breakdown
-                        </>
-                      )}
-                    </button>
-                    
-                    {showDetails && (
-                      <Card className="mt-2">
-                        <CardContent className="p-4">
-                          <h4 className="font-medium mb-2">Income Tax</h4>
+                  {/* Detailed Tax Breakdown */}
+                  {showDetails && (
+                    <div className="space-y-4">
+                      {/* Income Tax Breakdown */}
+                      <Card>
+                        <CardHeader className="p-4 pb-2">
+                          <CardTitle className="text-base">Income Tax Breakdown</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-2">
                           <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Band</TableHead>
+                                <TableHead>Taxable Amount</TableHead>
+                                <TableHead>Tax Rate</TableHead>
+                                <TableHead className="text-right">Tax Paid</TableHead>
+                              </TableRow>
+                            </TableHeader>
                             <TableBody>
                               <TableRow>
-                                <TableCell>Personal Allowance (0%)</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.incomeTax.personalAllowance)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(0)}</TableCell>
+                                <TableCell className="font-medium">Personal Allowance</TableCell>
+                                <TableCell>{formatCurrency(salaryResult.incomeTax.personalAllowance)}</TableCell>
+                                <TableCell>0%</TableCell>
+                                <TableCell className="text-right">£0.00</TableCell>
                               </TableRow>
                               <TableRow>
-                                <TableCell>Basic Rate (20%)</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.incomeTax.basicRate.amount)}</TableCell>
+                                <TableCell className="font-medium">Basic Rate</TableCell>
+                                <TableCell>{formatCurrency(salaryResult.incomeTax.basicRate.amount)}</TableCell>
+                                <TableCell>20%</TableCell>
                                 <TableCell className="text-right">{formatCurrency(salaryResult.incomeTax.basicRate.tax)}</TableCell>
                               </TableRow>
                               <TableRow>
-                                <TableCell>Higher Rate (40%)</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.incomeTax.higherRate.amount)}</TableCell>
+                                <TableCell className="font-medium">Higher Rate</TableCell>
+                                <TableCell>{formatCurrency(salaryResult.incomeTax.higherRate.amount)}</TableCell>
+                                <TableCell>40%</TableCell>
                                 <TableCell className="text-right">{formatCurrency(salaryResult.incomeTax.higherRate.tax)}</TableCell>
                               </TableRow>
                               <TableRow>
-                                <TableCell>Additional Rate (45%)</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.incomeTax.additionalRate.amount)}</TableCell>
+                                <TableCell className="font-medium">Additional Rate</TableCell>
+                                <TableCell>{formatCurrency(salaryResult.incomeTax.additionalRate.amount)}</TableCell>
+                                <TableCell>45%</TableCell>
                                 <TableCell className="text-right">{formatCurrency(salaryResult.incomeTax.additionalRate.tax)}</TableCell>
                               </TableRow>
-                              <TableRow className="font-medium">
-                                <TableCell>Total Income Tax</TableCell>
-                                <TableCell></TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.incomeTax.total)}</TableCell>
-                              </TableRow>
-                            </TableBody>
-                          </Table>
-                          
-                          <h4 className="font-medium mt-4 mb-2">National Insurance</h4>
-                          <Table>
-                            <TableBody>
                               <TableRow>
-                                <TableCell>Between £12,570 - £50,270 (12%)</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.nationalInsurance.primaryThreshold.amount)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.nationalInsurance.primaryThreshold.contribution)}</TableCell>
-                              </TableRow>
-                              <TableRow>
-                                <TableCell>Above £50,270 (2%)</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.nationalInsurance.upperEarningsLimit.amount)}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.nationalInsurance.upperEarningsLimit.contribution)}</TableCell>
-                              </TableRow>
-                              <TableRow className="font-medium">
-                                <TableCell>Total National Insurance</TableCell>
-                                <TableCell></TableCell>
-                                <TableCell className="text-right">{formatCurrency(salaryResult.nationalInsurance.total)}</TableCell>
+                                <TableCell className="font-medium" colSpan={3}>Total Income Tax</TableCell>
+                                <TableCell className="text-right font-semibold">{formatCurrency(salaryResult.incomeTax.total)}</TableCell>
                               </TableRow>
                             </TableBody>
                           </Table>
                         </CardContent>
                       </Card>
-                    )}
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" onClick={saveForComparison} className="flex items-center">
-                      <Copy className="h-4 w-4 mr-1" />
-                      Compare with Another Salary
-                    </Button>
-                  </div>
+                      
+                      {/* National Insurance Breakdown */}
+                      <Card>
+                        <CardHeader className="p-4 pb-2">
+                          <CardTitle className="text-base">National Insurance Breakdown</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-2">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Band</TableHead>
+                                <TableHead>Amount</TableHead>
+                                <TableHead>Rate</TableHead>
+                                <TableHead className="text-right">Contribution</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell className="font-medium">Between PT and UEL</TableCell>
+                                <TableCell>{formatCurrency(salaryResult.nationalInsurance.primaryThreshold.amount)}</TableCell>
+                                <TableCell>{salary.taxYear === TaxYear.Y2024_2025 ? '10%' : '12%'}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(salaryResult.nationalInsurance.primaryThreshold.contribution)}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell className="font-medium">Above UEL</TableCell>
+                                <TableCell>{formatCurrency(salaryResult.nationalInsurance.upperEarningsLimit.amount)}</TableCell>
+                                <TableCell>2%</TableCell>
+                                <TableCell className="text-right">{formatCurrency(salaryResult.nationalInsurance.upperEarningsLimit.contribution)}</TableCell>
+                              </TableRow>
+                              <TableRow>
+                                <TableCell className="font-medium" colSpan={3}>Total National Insurance</TableCell>
+                                <TableCell className="text-right font-semibold">{formatCurrency(salaryResult.nationalInsurance.total)}</TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </CardContent>
+                      </Card>
+                      
+                      {/* Additional Tax Info */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <Card>
+                          <CardContent className="p-4">
+                            <h3 className="text-sm font-medium text-gray-500">Marginal Tax Rate</h3>
+                            <div className="text-xl font-bold mt-1">{formatPercentage(salaryResult.marginalTaxRate)}</div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Tax rate on your next pound earned
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4">
+                            <h3 className="text-sm font-medium text-gray-500">Effective Tax Rate</h3>
+                            <div className="text-xl font-bold mt-1">{formatPercentage(salaryResult.effectiveTaxRate)}</div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Overall tax rate on your income
+                            </p>
+                          </CardContent>
+                        </Card>
+                        <Card>
+                          <CardContent className="p-4">
+                            <h3 className="text-sm font-medium text-gray-500">Pension Contribution</h3>
+                            <div className="text-xl font-bold mt-1">{formatCurrency(salaryResult.pension.periodContribution)} / period</div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {formatCurrency(salaryResult.pension.annualContribution)} annually
+                            </p>
+                          </CardContent>
+                        </Card>
+                      </div>
+                      
+                      {/* Student Loan Info */}
+                      {(salaryResult.studentLoan || salaryResult.postgraduateLoan) && (
+                        <Card>
+                          <CardHeader className="p-4 pb-2">
+                            <CardTitle className="text-base">Student Loan Repayments</CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-4 pt-2">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Type</TableHead>
+                                  <TableHead>Threshold</TableHead>
+                                  <TableHead>Rate</TableHead>
+                                  <TableHead className="text-right">Annual Repayment</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {salaryResult.studentLoan && (
+                                  <TableRow>
+                                    <TableCell className="font-medium">Plan {salaryResult.studentLoan.plan}</TableCell>
+                                    <TableCell>
+                                      {formatCurrency(STUDENT_LOAN_TYPES.find(loan => loan.value === salaryResult.studentLoan?.plan)?.threshold || 0)}
+                                    </TableCell>
+                                    <TableCell>
+                                      {formatPercentage(STUDENT_LOAN_TYPES.find(loan => loan.value === salaryResult.studentLoan?.plan)?.rate || 0)}
+                                    </TableCell>
+                                    <TableCell className="text-right">{formatCurrency(salaryResult.studentLoan.amount)}</TableCell>
+                                  </TableRow>
+                                )}
+                                {salaryResult.postgraduateLoan && (
+                                  <TableRow>
+                                    <TableCell className="font-medium">Postgraduate Loan</TableCell>
+                                    <TableCell>
+                                      {formatCurrency(STUDENT_LOAN_TYPES.find(loan => loan.value === 'postgrad')?.threshold || 0)}
+                                    </TableCell>
+                                    <TableCell>
+                                      {formatPercentage(STUDENT_LOAN_TYPES.find(loan => loan.value === 'postgrad')?.rate || 0)}
+                                    </TableCell>
+                                    <TableCell className="text-right">{formatCurrency(salaryResult.postgraduateLoan.amount)}</TableCell>
+                                  </TableRow>
+                                )}
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
