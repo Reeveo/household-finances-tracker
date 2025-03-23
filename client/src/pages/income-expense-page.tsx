@@ -8,6 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CSVImport } from "@/components/income-expense/csv-import";
 import { useEffect } from "react";
 import { initCategorizationEngine } from "@/lib/utils/categorization";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
+import { BarChart } from "lucide-react";
 
 export default function IncomeExpensePage() {
   // Initialize categorization engine when page loads
@@ -21,7 +24,15 @@ export default function IncomeExpensePage() {
       
       <main className="flex-1 p-4 lg:p-6 overflow-y-auto">
         <div className="space-y-6">
-          <h1 className="text-2xl font-bold tracking-tight">Income & Expense Tracker</h1>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <h1 className="text-2xl font-bold tracking-tight">Income & Expense Tracker</h1>
+            <Link href="/transaction-analytics">
+              <Button variant="outline" className="gap-2 hover:bg-muted">
+                <BarChart className="h-4 w-4" />
+                <span>Advanced Analytics</span>
+              </Button>
+            </Link>
+          </div>
           
           <Tabs defaultValue="dashboard" className="w-full">
             <TabsList className="grid w-full max-w-md grid-cols-4">
