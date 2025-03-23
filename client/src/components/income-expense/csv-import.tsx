@@ -292,10 +292,31 @@ function createTransactionId(transaction: Partial<BankTransaction>): string {
 
 // Helper function to create a suggester that returns an object with category, subcategory, and confidence
 function suggestCategoryWithConfidence(description: string, amount: number) {
-  const category = suggestCategory(description);
-  const subcategory = SUB_CATEGORIES[category].length > 0 ? SUB_CATEGORIES[category][0] : '';
-  const confidence = calculateConfidenceScore(description, category, subcategory);
-  return { category, subcategory, confidence };
+  try {
+    const category = suggestCategory(description);
+    
+    // Ensure we have a valid category by checking against SUB_CATEGORIES
+    const validCategory = SUB_CATEGORIES[category] ? category : "Essentials";
+    
+    // Get first subcategory if available, or empty string
+    const subcategory = SUB_CATEGORIES[validCategory]?.length > 0 
+      ? SUB_CATEGORIES[validCategory][0] 
+      : '';
+      
+    const confidence = calculateConfidenceScore(description, validCategory, subcategory);
+    return { 
+      category: validCategory, 
+      subcategory, 
+      confidence 
+    };
+  } catch (err) {
+    console.error("Error in category suggestion:", err);
+    return { 
+      category: "Essentials", 
+      subcategory: "Miscellaneous", 
+      confidence: 0.1 
+    };
+  }
 }
 
 // Month options for budget assignment
@@ -510,11 +531,19 @@ export function CSVImport() {
           console.log(`Line ${i} normalized date:`, normalizedDate);
           
           // Auto-categorize based on transaction description using our advanced categorization engine
-          const suggestedCategory = suggestCategory(description);
+          let suggestedCategory = "Essentials"; // Default fallback category
+          
+          try {
+            suggestedCategory = suggestCategory(description);
+            console.log(`Got suggested category: ${suggestedCategory} for "${description}"`);
+          } catch (error) {
+            console.error("Error suggesting category:", error);
+          }
+          
           // Get suggested subcategory for this category
-          const suggestedSubcategory = SUB_CATEGORIES[suggestedCategory]?.length > 0 
-            ? SUB_CATEGORIES[suggestedCategory][0] 
-            : '';
+          const subcategories = SUB_CATEGORIES[suggestedCategory] || [];
+          const suggestedSubcategory = subcategories.length > 0 ? subcategories[0] : '';
+          console.log(`Selected subcategory: ${suggestedSubcategory} from options:`, subcategories);
           
           console.log(`Line ${i} category:`, suggestedCategory);
           console.log(`Line ${i} subcategory:`, suggestedSubcategory);
@@ -764,31 +793,56 @@ export function CSVImport() {
       // Transform transactions to match API schema
       // Transform transactions to match API schema defined in shared/schema.ts
       const formattedTransactions = validTransactions.map(transaction => {
-        // Determine type based on amount (positive = income, negative = expense)
-        const type = transaction.amount >= 0 ? "income" : "expense";
-        
-        // Extract month and year from transaction date for budget allocation
-        const dateParts = transaction.transactionDate.split('-');
-        const year = parseInt(dateParts[0], 10);
-        const month = parseInt(dateParts[1], 10);
-        
-        // Map CSV data to our transaction schema
-        return {
-          date: transaction.transactionDate,
-          description: transaction.description,
-          amount: transaction.amount.toString(),
-          type: type, // Required field: income or expense
-          category: transaction.category,
-          subcategory: transaction.subcategory,
-          balance: transaction.balance ? transaction.balance.toString() : null,
-          reference: transaction.reference || null,
-          budgetMonth: month,
-          budgetYear: year,
-          isRecurring: false,
-          paymentMethod: "bank",
-          notes: null,
-          importHash: transaction.id // Use the transaction ID as import hash for deduplication
-        };
+        try {
+          // Determine type based on amount (positive = income, negative = expense)
+          const type = transaction.amount >= 0 ? "income" : "expense";
+          
+          // Extract month and year from transaction date for budget allocation
+          let month = new Date().getMonth() + 1; // Default to current month (1-12)
+          let year = new Date().getFullYear();    // Default to current year
+          
+          if (transaction.transactionDate && transaction.transactionDate.includes('-')) {
+            const dateParts = transaction.transactionDate.split('-');
+            if (dateParts.length >= 2) {
+              year = parseInt(dateParts[0], 10) || year;
+              month = parseInt(dateParts[1], 10) || month;
+            }
+          }
+          
+          console.log(`Transaction ${transaction.description} - date parsing: ${transaction.transactionDate} -> ${year}-${month}`);
+          
+          // Map CSV data to our transaction schema
+          return {
+            userId: 0, // This will be filled in by the server from the authenticated user
+            date: transaction.transactionDate,
+            description: transaction.description || "Unknown transaction",
+            amount: transaction.amount.toString(),
+            type: type, // Required field: income or expense
+            category: transaction.category || "Essentials",
+            subcategory: transaction.subcategory || null,
+            balance: transaction.balance ? transaction.balance.toString() : null,
+            reference: transaction.reference || null,
+            budgetMonth: month,
+            budgetYear: year,
+            isRecurring: false,
+            paymentMethod: "bank",
+            notes: null,
+            importHash: transaction.id || `${transaction.transactionDate}_${transaction.description}_${transaction.amount}` // Fallback hash for deduplication
+          };
+        } catch (error) {
+          console.error("Error formatting transaction:", error, transaction);
+          // Return a minimal valid transaction to avoid breaking the batch
+          return {
+            userId: 0,
+            date: new Date().toISOString().split('T')[0],
+            description: transaction.description || "Error processing transaction",
+            amount: transaction.amount?.toString() || "0",
+            type: "expense",
+            category: "Essentials",
+            budgetMonth: new Date().getMonth() + 1,
+            budgetYear: new Date().getFullYear()
+          };
+        }
       });
       
       console.log("Formatted transactions:", formattedTransactions);
