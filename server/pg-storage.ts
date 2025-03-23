@@ -547,7 +547,7 @@ export class PgStorage implements IStorage {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()) RETURNING *`,
       [
         userId, date, type, amount, category, subcategory, description, 
-        frequency, notes, recurring, budgetMonth, budgetYear, paymentMethod,
+        frequency, notes, isRecurring, budgetMonth, budgetYear, paymentMethod,
         balance, reference, importHash
       ]
     );
@@ -566,7 +566,7 @@ export class PgStorage implements IStorage {
         const result = await client.query(
           `INSERT INTO transactions (
             user_id, date, type, amount, category, subcategory, description, 
-            frequency, notes, recurring, budget_month, budget_year, payment_method, 
+            frequency, notes, is_recurring, budget_month, budget_year, payment_method, 
             balance, reference, import_hash, created_at
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()) RETURNING *`,
           [
@@ -579,7 +579,7 @@ export class PgStorage implements IStorage {
             transaction.description, 
             transaction.frequency, 
             transaction.notes, 
-            transaction.recurring,
+            transaction.isRecurring,
             transaction.budgetMonth,
             transaction.budgetYear,
             transaction.paymentMethod,
@@ -647,7 +647,7 @@ export class PgStorage implements IStorage {
   async getTransactionsByDateRange(userId: number, startDate: Date, endDate: Date): Promise<Transaction[]> {
     const result = await pool.query(
       'SELECT * FROM transactions WHERE user_id = $1 AND date >= $2 AND date <= $3 ORDER BY date DESC',
-      [userId, startDate.toISOString(), endDate.toISOString()]
+      [userId, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]]
     );
     return result.rows;
   }

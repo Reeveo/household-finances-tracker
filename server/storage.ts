@@ -440,11 +440,14 @@ export class MemStorage implements IStorage {
   }
   
   async getTransactionsByDateRange(userId: number, startDate: Date, endDate: Date): Promise<Transaction[]> {
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
     return Array.from(this.transactions.values()).filter(
       (transaction) => 
         transaction.userId === userId && 
-        transaction.date >= startDate && 
-        transaction.date <= endDate
+        transaction.date >= startDateStr && 
+        transaction.date <= endDateStr
     );
   }
   
