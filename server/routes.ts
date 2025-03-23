@@ -11,7 +11,8 @@ import {
   insertInvestmentSchema,
   insertSharedAccessSchema,
   insertInvitationSchema,
-  insertTransactionSchema
+  insertTransactionSchema,
+  insertUserSchema
 } from "@shared/schema";
 import crypto from "crypto";
 

@@ -14,6 +14,7 @@ import MortgageOverpaymentPage from "@/pages/mortgage-overpayment-page";
 import PensionCalculatorPage from "@/pages/pension-calculator-page";
 import SalaryCalculatorPage from "@/pages/salary-calculator-page";
 import TransactionAnalyticsPage from "@/pages/transaction-analytics-page";
+import SettingsPage from "@/pages/settings-page";
 import AuthPage from "@/pages/auth-page";
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
       <ProtectedRoute path="/mortgage-overpayment" component={MortgageOverpaymentPage} />
       <ProtectedRoute path="/pension-calculator" component={PensionCalculatorPage} />
       <ProtectedRoute path="/transaction-analytics" component={TransactionAnalyticsPage} />
+      <ProtectedRoute path="/settings" component={SettingsPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>
