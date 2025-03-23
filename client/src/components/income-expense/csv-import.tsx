@@ -444,17 +444,27 @@ export function CSVImport() {
       // Process each non-empty line
       const transactions: BankTransaction[] = [];
       
+      // Debug logging
+      console.log("Processing CSV with mapping:", mapping);
+      console.log("Using delimiter:", delimiter);
+      console.log("CSV has header:", hasHeaderRow);
+      console.log("Raw lines count:", rawCsvLines.length);
+      
       for (let i = startIndex; i < rawCsvLines.length; i++) {
         const line = rawCsvLines[i].trim();
         if (!line) continue;
         
         // Split line by delimiter, handle quoted fields
         const values = line.split(delimiter);
+        console.log(`Line ${i} values:`, values);
         
         try {
           // Extract data based on mapping
           const dateValue = mapping.transactionDate >= 0 ? values[mapping.transactionDate] : '';
           const description = mapping.description >= 0 ? values[mapping.description] : '';
+          
+          console.log(`Line ${i} date:`, dateValue);
+          console.log(`Line ${i} description:`, description);
           
           // Handle amount - some banks use separate debit/credit columns, others use a single amount column
           let amount = 0;
@@ -462,12 +472,16 @@ export function CSVImport() {
           if (mapping.amount !== null && mapping.amount >= 0) {
             // Single amount column format
             const amountStr = values[mapping.amount];
+            console.log(`Line ${i} amount string:`, amountStr);
             amount = parseFloat(amountStr.replace(/[£$,]/g, '') || '0');
           } else if (mapping.debitAmount !== null && mapping.creditAmount !== null && 
                      mapping.debitAmount >= 0 && mapping.creditAmount >= 0) {
             // Separate debit/credit columns format
             const debitStr = values[mapping.debitAmount];
             const creditStr = values[mapping.creditAmount];
+            
+            console.log(`Line ${i} debit string:`, debitStr);
+            console.log(`Line ${i} credit string:`, creditStr);
             
             const debit = parseFloat(debitStr.replace(/[£$,]/g, '') || '0');
             const credit = parseFloat(creditStr.replace(/[£$,]/g, '') || '0');
@@ -476,28 +490,34 @@ export function CSVImport() {
             amount = credit - debit;
           }
           
+          console.log(`Line ${i} parsed amount:`, amount);
+          
           // Extract other fields if available
           const balance = mapping.balance !== null && mapping.balance >= 0 
-            ? values[mapping.balance].replace(/[£$,]/g, '')
+            ? values[mapping.balance]?.replace(/[£$,]/g, '') || ''
             : '';
             
           const reference = mapping.reference !== null && mapping.reference >= 0 
-            ? values[mapping.reference]
+            ? values[mapping.reference] || ''
             : '';
             
           const type = mapping.type !== null && mapping.type >= 0 
-            ? values[mapping.type]
+            ? values[mapping.type] || ''
             : '';
             
           // Normalize date format
           const normalizedDate = normalizeDate(dateValue, currentBankFormat.dateFormat);
+          console.log(`Line ${i} normalized date:`, normalizedDate);
           
           // Auto-categorize based on transaction description using our advanced categorization engine
           const suggestedCategory = suggestCategory(description);
           // Get suggested subcategory for this category
-          const suggestedSubcategory = SUB_CATEGORIES[suggestedCategory].length > 0 
+          const suggestedSubcategory = SUB_CATEGORIES[suggestedCategory]?.length > 0 
             ? SUB_CATEGORIES[suggestedCategory][0] 
             : '';
+          
+          console.log(`Line ${i} category:`, suggestedCategory);
+          console.log(`Line ${i} subcategory:`, suggestedSubcategory);
           
           // Create transaction object
           const transaction: BankTransaction = {
@@ -520,6 +540,7 @@ export function CSVImport() {
           
           // Add to transactions list
           transactions.push(transaction);
+          console.log(`Added transaction for ${transaction.description} with amount ${transaction.amount}`);
         } catch (err) {
           // Skip invalid lines
           console.error(`Error processing line ${i+1}:`, err);
@@ -528,6 +549,7 @@ export function CSVImport() {
       
       // Check for duplicates (will be fully implemented in the deduplication step)
       const deduplicated = transactions;
+      console.log("Total transactions processed:", deduplicated.length);
       
       // Update state
       setCsvData(deduplicated);
@@ -543,7 +565,7 @@ export function CSVImport() {
       console.error("Error processing transactions:", error);
       toast({
         title: "Error processing transactions",
-        description: "An error occurred while processing the transactions",
+        description: "An error occurred while processing the transactions: " + (error instanceof Error ? error.message : String(error)),
         variant: "destructive"
       });
       setIsUploading(false);
@@ -728,6 +750,8 @@ export function CSVImport() {
       // Filter out invalid and duplicate transactions
       const validTransactions = csvData.filter(t => t.isValid && !t.isDuplicate);
       
+      console.log("Valid transactions count:", validTransactions.length);
+      
       if (validTransactions.length === 0) {
         toast({
           title: "No valid transactions",
@@ -738,23 +762,40 @@ export function CSVImport() {
       }
       
       // Transform transactions to match API schema
-      const formattedTransactions = validTransactions.map(transaction => ({
-        date: transaction.transactionDate,
-        description: transaction.description,
-        amount: transaction.amount.toString(),
-        category: transaction.category,
-        subcategory: transaction.subcategory,
-        type: transaction.type || "bank-transaction",
-        balance: transaction.balance ? transaction.balance.toString() : null,
-        reference: transaction.reference || null,
-        budgetMonth: transaction.budgetMonth || null,
-        isRecurring: false,
-        paymentMethod: "bank",
-        notes: null,
-        importHash: transaction.id // Use the transaction ID as import hash to prevent duplicates
-      }));
+      // Transform transactions to match API schema defined in shared/schema.ts
+      const formattedTransactions = validTransactions.map(transaction => {
+        // Determine type based on amount (positive = income, negative = expense)
+        const type = transaction.amount >= 0 ? "income" : "expense";
+        
+        // Extract month and year from transaction date for budget allocation
+        const dateParts = transaction.transactionDate.split('-');
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10);
+        
+        // Map CSV data to our transaction schema
+        return {
+          date: transaction.transactionDate,
+          description: transaction.description,
+          amount: transaction.amount.toString(),
+          type: type, // Required field: income or expense
+          category: transaction.category,
+          subcategory: transaction.subcategory,
+          balance: transaction.balance ? transaction.balance.toString() : null,
+          reference: transaction.reference || null,
+          budgetMonth: month,
+          budgetYear: year,
+          isRecurring: false,
+          paymentMethod: "bank",
+          notes: null,
+          importHash: transaction.id // Use the transaction ID as import hash for deduplication
+        };
+      });
+      
+      console.log("Formatted transactions:", formattedTransactions);
       
       // Call API to save transactions in batch
+      console.log("Sending to API:", JSON.stringify({ transactions: formattedTransactions }));
+      
       const response = await fetch('/api/transactions/batch', {
         method: 'POST',
         headers: {
@@ -763,16 +804,41 @@ export function CSVImport() {
         body: JSON.stringify({ transactions: formattedTransactions }),
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to import transactions');
+      console.log("API response status:", response.status);
+      
+      // Try to get response body regardless of status code for debugging
+      let responseText = '';
+      try {
+        responseText = await response.text();
+        console.log("Response text:", responseText);
+      } catch (err) {
+        console.error("Failed to get response text:", err);
       }
       
-      const result = await response.json();
+      if (!response.ok) {
+        let errorMessage = 'Failed to import transactions';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          // If we can't parse JSON, use the raw text
+          if (responseText) errorMessage = responseText;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch {
+        result = { stats: { created: 'unknown', skipped: 0 } };
+      }
       
       toast({
         title: "Import successful",
-        description: `${result.stats.created} transactions have been imported.${result.stats.skipped > 0 ? ` ${result.stats.skipped} transactions were skipped.` : ''}`,
+        description: `${result.stats?.created || 'Unknown number of'} transactions have been imported.${
+          result.stats?.skipped > 0 ? ` ${result.stats.skipped} transactions were skipped.` : ''
+        }`,
         variant: "default"
       });
       
