@@ -1,0 +1,153 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run all tests
+      run: |
+        npm run test:unit
+        npm run test:integration
+      env:
+        NODE_ENV: test
+        DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+
+    - name: Build
+      run: npm run build
+      env:
+        NODE_ENV: production
+
+    - name: Setup Sentry CLI
+      uses: getsentry/action-setup-cli@v1.2.0
+      with:
+        version: latest
+      env:
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+
+    - name: Upload source maps to Sentry
+      run: npm run sentry:sourcemaps
+      env:
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+
+    - name: Deploy to staging
+      run: |
+        # Add deployment script here
+        echo "Deploying to staging..."
+      env:
+        DEPLOY_URL: ${{ secrets.STAGING_DEPLOY_URL }}
+        DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        SESSION_SECRET: ${{ secrets.STAGING_SESSION_SECRET }}
+
+    - name: Install k6
+      run: |
+        curl https://github.com/grafana/k6/releases/download/v0.47.0/k6-v0.47.0-linux-amd64.tar.gz -L | tar xvz --strip-components 1
+
+    - name: Run performance tests
+      run: npm run test:performance
+      env:
+        BASE_URL: ${{ secrets.STAGING_URL }}
+        K6_OUT: influxdb=http://${{ secrets.INFLUXDB_HOST }}:8086/k6
+
+    - name: Run E2E tests on staging
+      run: npm run test:e2e:ci
+      env:
+        BASE_URL: ${{ secrets.STAGING_URL }}
+
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build
+      run: npm run build
+      env:
+        NODE_ENV: production
+
+    - name: Setup Sentry CLI
+      uses: getsentry/action-setup-cli@v1.2.0
+      with:
+        version: latest
+      env:
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+
+    - name: Upload source maps to Sentry
+      run: npm run sentry:sourcemaps
+      env:
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+
+    - name: Run database migrations
+      run: npm run db:migrate
+      env:
+        DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+
+    - name: Deploy to production
+      id: deploy
+      run: |
+        # Add deployment script here
+        echo "Deploying to production..."
+        echo "url=https://your-production-url.com" >> $GITHUB_OUTPUT
+      env:
+        DEPLOY_URL: ${{ secrets.PROD_DEPLOY_URL }}
+        DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        SESSION_SECRET: ${{ secrets.PROD_SESSION_SECRET }}
+
+    - name: Verify deployment
+      run: |
+        # Add health check verification
+        echo "Verifying deployment..."
+      env:
+        HEALTH_CHECK_URL: ${{ secrets.PROD_HEALTH_CHECK_URL }} 

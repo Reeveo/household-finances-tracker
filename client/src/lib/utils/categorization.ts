@@ -2,18 +2,18 @@ import { Transaction } from "@shared/schema";
 
 // Main financial categories
 export const CATEGORIES = [
+  'Income',
   'Essentials',
   'Lifestyle',
-  'Savings',
-  'Income'
+  'Savings'
 ];
 
 // Sub-categories for different main categories
 export const SUB_CATEGORIES: Record<string, string[]> = {
-  'Essentials': ['Rent/Mortgage', 'Utilities', 'Groceries', 'Transport', 'Insurance', 'Healthcare', 'Debt Repayment'],
-  'Lifestyle': ['Dining Out', 'Entertainment', 'Shopping', 'Travel', 'Gifts', 'Subscriptions', 'Hobbies'],
-  'Savings': ['Emergency Fund', 'Retirement', 'Investment', 'Property', 'Education', 'Future Goals'],
-  'Income': ['Salary', 'Side Hustle', 'Investment Income', 'Rental Income', 'Benefits', 'Gifts Received', 'Tax Refund']
+  'Income': ['Salary', 'Investments', 'Freelance', 'Other Income'],
+  'Essentials': ['Housing', 'Utilities', 'Groceries', 'Transport', 'Insurance', 'Healthcare', 'Debt Repayment'],
+  'Lifestyle': ['Dining Out', 'Entertainment', 'Shopping', 'Clothing', 'Travel', 'Gifts', 'Subscriptions', 'Hobbies'],
+  'Savings': ['Emergency Fund', 'Retirement', 'Investment', 'Property', 'Education', 'Future Goals']
 };
 
 // Map of merchants to their categories
@@ -28,120 +28,37 @@ export type MerchantMapping = {
 // Merchants database with pattern matching and confidence levels
 export const MERCHANT_MAPPINGS: MerchantMapping[] = [
   // Income
-  { name: "Salary", patterns: ["salary", "wage", "payroll", "payment from employer"], category: "Income", subcategory: "Salary", confidence: 0.95 },
-  { name: "Freelance", patterns: ["freelance", "contract work", "client payment"], category: "Income", subcategory: "Side Hustle", confidence: 0.85 },
-  { name: "Dividends", patterns: ["dividend", "share", "investment income"], category: "Income", subcategory: "Investment Income", confidence: 0.9 },
-  { name: "Rental Income", patterns: ["rent received", "tenant", "property income"], category: "Income", subcategory: "Rental Income", confidence: 0.9 },
-  { name: "Benefits", patterns: ["universal credit", "benefit", "allowance", "hmrc", "gov.uk", "dwp"], category: "Income", subcategory: "Benefits", confidence: 0.9 },
-  { name: "Gift", patterns: ["gift received", "money gift"], category: "Income", subcategory: "Gifts Received", confidence: 0.7 },
-  { name: "Tax Refund", patterns: ["tax refund", "hmrc refund", "rebate"], category: "Income", subcategory: "Tax Refund", confidence: 0.95 },
-  
-  // Essentials - Housing
-  { name: "Mortgage", patterns: ["mortgage", "home loan"], category: "Essentials", subcategory: "Rent/Mortgage", confidence: 0.95 },
-  { name: "Rent", patterns: ["rent", "landlord", "letting", "estate agent"], category: "Essentials", subcategory: "Rent/Mortgage", confidence: 0.9 },
-  
-  // Essentials - Utilities
-  { name: "Electricity", patterns: ["electric", "electricity", "power", "eon", "edf", "bulb", "octopus energy"], category: "Essentials", subcategory: "Utilities", confidence: 0.9 },
-  { name: "Gas", patterns: ["gas", "british gas", "eon gas"], category: "Essentials", subcategory: "Utilities", confidence: 0.9 },
-  { name: "Water", patterns: ["water", "thames water", "severn trent", "anglian"], category: "Essentials", subcategory: "Utilities", confidence: 0.9 },
-  { name: "Council Tax", patterns: ["council tax", "council", "local authority"], category: "Essentials", subcategory: "Utilities", confidence: 0.95 },
-  { name: "Internet", patterns: ["internet", "broadband", "bt", "virgin media", "sky broadband", "plusnet", "talktalk"], category: "Essentials", subcategory: "Utilities", confidence: 0.9 },
-  { name: "Mobile Phone", patterns: ["mobile", "phone", "o2", "ee", "vodafone", "three", "giffgaff"], category: "Essentials", subcategory: "Utilities", confidence: 0.8 },
+  { name: "Salary", patterns: ["salary", "payroll", "wage payment"], category: "Income", subcategory: "Salary", confidence: 0.95 },
+  { name: "Investments", patterns: ["dividend", "stock yield", "investment income"], category: "Income", subcategory: "Investments", confidence: 0.9 },
+  { name: "Freelance", patterns: ["upwork", "fiverr", "freelance"], category: "Income", subcategory: "Freelance", confidence: 0.85 },
   
   // Essentials - Groceries
   { name: "Tesco", patterns: ["tesco"], category: "Essentials", subcategory: "Groceries", confidence: 0.9 },
   { name: "Sainsbury's", patterns: ["sainsbury"], category: "Essentials", subcategory: "Groceries", confidence: 0.9 },
-  { name: "Asda", patterns: ["asda"], category: "Essentials", subcategory: "Groceries", confidence: 0.9 },
-  { name: "Morrisons", patterns: ["morrisons"], category: "Essentials", subcategory: "Groceries", confidence: 0.9 },
-  { name: "Aldi", patterns: ["aldi"], category: "Essentials", subcategory: "Groceries", confidence: 0.9 },
-  { name: "Lidl", patterns: ["lidl"], category: "Essentials", subcategory: "Groceries", confidence: 0.9 },
-  { name: "Waitrose", patterns: ["waitrose"], category: "Essentials", subcategory: "Groceries", confidence: 0.9 },
-  { name: "M&S Food", patterns: ["m&s food", "marks & spencer food", "marks and spencer food"], category: "Essentials", subcategory: "Groceries", confidence: 0.9 },
-  { name: "Co-op", patterns: ["co-op", "coop"], category: "Essentials", subcategory: "Groceries", confidence: 0.9 },
-  { name: "Iceland", patterns: ["iceland"], category: "Essentials", subcategory: "Groceries", confidence: 0.9 },
-  { name: "Grocery", patterns: ["grocery", "food", "supermarket"], category: "Essentials", subcategory: "Groceries", confidence: 0.8 },
   
-  // Essentials - Transport
-  { name: "Fuel", patterns: ["fuel", "petrol", "diesel", "shell", "bp", "esso", "texaco"], category: "Essentials", subcategory: "Transport", confidence: 0.9 },
-  { name: "Public Transport", patterns: ["transport", "train", "railway", "bus", "coach", "tube", "underground", "oyster", "tfl"], category: "Essentials", subcategory: "Transport", confidence: 0.9 },
-  { name: "Car Maintenance", patterns: ["mot", "service", "repair", "garage", "kwik fit", "halfords"], category: "Essentials", subcategory: "Transport", confidence: 0.8 },
-  { name: "Parking", patterns: ["parking", "ncp", "ringo"], category: "Essentials", subcategory: "Transport", confidence: 0.9 },
-  { name: "Taxi", patterns: ["taxi", "uber", "bolt", "gett", "cab"], category: "Essentials", subcategory: "Transport", confidence: 0.8 },
+  // Lifestyle - Dining
+  { name: "McDonald's", patterns: ["mcdonalds"], category: "Lifestyle", subcategory: "Dining Out", confidence: 0.9 },
+  { name: "Pizza Express", patterns: ["pizza express"], category: "Lifestyle", subcategory: "Dining Out", confidence: 0.9 },
   
-  // Essentials - Insurance
-  { name: "Home Insurance", patterns: ["home insurance", "house insurance", "contents insurance"], category: "Essentials", subcategory: "Insurance", confidence: 0.95 },
-  { name: "Car Insurance", patterns: ["car insurance", "auto insurance", "vehicle insurance"], category: "Essentials", subcategory: "Insurance", confidence: 0.95 },
-  { name: "Health Insurance", patterns: ["health insurance", "medical insurance", "bupa", "axa"], category: "Essentials", subcategory: "Insurance", confidence: 0.95 },
-  { name: "Life Insurance", patterns: ["life insurance", "life cover", "life plan"], category: "Essentials", subcategory: "Insurance", confidence: 0.95 },
-  { name: "Travel Insurance", patterns: ["travel insurance"], category: "Essentials", subcategory: "Insurance", confidence: 0.9 },
-  { name: "Insurance", patterns: ["insurance", "aviva", "direct line", "churchill", "lv", "legal & general"], category: "Essentials", subcategory: "Insurance", confidence: 0.9 },
-  
-  // Essentials - Healthcare
-  { name: "Pharmacy", patterns: ["pharmacy", "boots", "chemist", "superdrug", "prescription"], category: "Essentials", subcategory: "Healthcare", confidence: 0.9 },
-  { name: "Doctor", patterns: ["doctor", "gp", "medical", "hospital", "clinic", "nhs"], category: "Essentials", subcategory: "Healthcare", confidence: 0.9 },
-  { name: "Dental", patterns: ["dental", "dentist", "orthodontist"], category: "Essentials", subcategory: "Healthcare", confidence: 0.9 },
-  { name: "Optician", patterns: ["optician", "optometrist", "glasses", "contact lenses", "vision express", "specsavers"], category: "Essentials", subcategory: "Healthcare", confidence: 0.9 },
-  
-  // Essentials - Debt Repayment
-  { name: "Credit Card", patterns: ["credit card payment", "credit card", "amex payment", "visa payment"], category: "Essentials", subcategory: "Debt Repayment", confidence: 0.9 },
-  { name: "Loan", patterns: ["loan", "loan payment", "loan repayment"], category: "Essentials", subcategory: "Debt Repayment", confidence: 0.9 },
-  { name: "Student Loan", patterns: ["student loan", "slc", "student finance"], category: "Essentials", subcategory: "Debt Repayment", confidence: 0.95 },
-  { name: "Debt Consolidation", patterns: ["debt", "debt payment", "debt settlement", "debt repayment"], category: "Essentials", subcategory: "Debt Repayment", confidence: 0.9 },
-  
-  // Lifestyle - Dining Out
-  { name: "Restaurant", patterns: ["restaurant", "dining", "eatery"], category: "Lifestyle", subcategory: "Dining Out", confidence: 0.9 },
-  { name: "Fast Food", patterns: ["mcdonalds", "burger king", "kfc", "subway", "dominos", "pizza hut", "wendys", "taco bell"], category: "Lifestyle", subcategory: "Dining Out", confidence: 0.9 },
-  { name: "Coffee Shop", patterns: ["coffee", "costa", "starbucks", "caffe nero", "pret", "cafe"], category: "Lifestyle", subcategory: "Dining Out", confidence: 0.9 },
-  { name: "Takeaway", patterns: ["takeaway", "just eat", "deliveroo", "uber eats", "take out"], category: "Lifestyle", subcategory: "Dining Out", confidence: 0.9 },
-  { name: "Pub", patterns: ["pub", "bar", "tavern", "wetherspoons"], category: "Lifestyle", subcategory: "Dining Out", confidence: 0.9 },
+  // Essentials - Utilities
+  { name: "British Gas", patterns: ["british gas"], category: "Essentials", subcategory: "Utilities", confidence: 0.9 },
+  { name: "Water", patterns: ["water bill"], category: "Essentials", subcategory: "Utilities", confidence: 0.9 },
   
   // Lifestyle - Entertainment
-  { name: "Cinema", patterns: ["cinema", "odeon", "vue", "cineworld", "picturehouse", "showcase"], category: "Lifestyle", subcategory: "Entertainment", confidence: 0.9 },
-  { name: "Theatre", patterns: ["theatre", "theater", "play", "musical", "show"], category: "Lifestyle", subcategory: "Entertainment", confidence: 0.9 },
-  { name: "Concert", patterns: ["concert", "gig", "festival", "ticket master", "live music", "o2 arena"], category: "Lifestyle", subcategory: "Entertainment", confidence: 0.9 },
-  { name: "Sports Event", patterns: ["match", "game", "stadium", "sports event"], category: "Lifestyle", subcategory: "Entertainment", confidence: 0.8 },
-  { name: "Streaming", patterns: ["netflix", "disney+", "amazon prime", "apple tv", "now tv", "hulu", "hbo"], category: "Lifestyle", subcategory: "Subscriptions", confidence: 0.95 },
-  { name: "Music", patterns: ["spotify", "apple music", "tidal", "deezer", "youtube music"], category: "Lifestyle", subcategory: "Subscriptions", confidence: 0.95 },
+  { name: "Netflix", patterns: ["netflix"], category: "Lifestyle", subcategory: "Entertainment", confidence: 0.95 },
+  { name: "Spotify", patterns: ["spotify"], category: "Lifestyle", subcategory: "Entertainment", confidence: 0.95 },
   
   // Lifestyle - Shopping
-  { name: "Amazon", patterns: ["amazon"], category: "Lifestyle", subcategory: "Shopping", confidence: 0.9 },
-  { name: "eBay", patterns: ["ebay"], category: "Lifestyle", subcategory: "Shopping", confidence: 0.9 },
-  { name: "Clothing", patterns: ["clothing", "fashion", "apparel", "h&m", "zara", "primark", "next", "asos", "tk maxx"], category: "Lifestyle", subcategory: "Shopping", confidence: 0.9 },
-  { name: "Electronics", patterns: ["electronics", "currys", "argos", "apple store", "samsung", "john lewis"], category: "Lifestyle", subcategory: "Shopping", confidence: 0.9 },
-  { name: "Home Goods", patterns: ["home goods", "furniture", "ikea", "dunelm", "home sense", "wilko", "the range"], category: "Lifestyle", subcategory: "Shopping", confidence: 0.9 },
-  { name: "Beauty", patterns: ["beauty", "cosmetics", "makeup", "skincare", "sephora", "boots beauty"], category: "Lifestyle", subcategory: "Shopping", confidence: 0.9 },
-  { name: "Books", patterns: ["books", "waterstones", "barnes", "kindle"], category: "Lifestyle", subcategory: "Shopping", confidence: 0.9 },
+  { name: "Amazon", patterns: ["amazon", "amzn"], category: "Lifestyle", subcategory: "Shopping", confidence: 0.9 },
+  { name: "ASOS", patterns: ["asos"], category: "Lifestyle", subcategory: "Clothing", confidence: 0.9 },
   
-  // Lifestyle - Travel
-  { name: "Hotel", patterns: ["hotel", "accommodation", "lodging", "airbnb", "booking.com", "hotels.com", "expedia", "holiday inn", "premier inn", "travelodge"], category: "Lifestyle", subcategory: "Travel", confidence: 0.9 },
-  { name: "Flight", patterns: ["flight", "airline", "british airways", "easyjet", "ryanair", "jet2", "virgin atlantic", "emirates"], category: "Lifestyle", subcategory: "Travel", confidence: 0.95 },
-  { name: "Holiday", patterns: ["holiday", "vacation", "resort", "package holiday", "all inclusive", "tui", "thomas cook"], category: "Lifestyle", subcategory: "Travel", confidence: 0.9 },
-  { name: "Car Rental", patterns: ["car rental", "car hire", "hertz", "avis", "enterprise", "europcar", "sixt"], category: "Lifestyle", subcategory: "Travel", confidence: 0.9 },
-  { name: "Travel Agency", patterns: ["travel agent", "travel agency", "tour", "expedia", "lastminute"], category: "Lifestyle", subcategory: "Travel", confidence: 0.9 },
+  // Essentials - Transport
+  { name: "Uber", patterns: ["uber"], category: "Essentials", subcategory: "Transport", confidence: 0.9 },
+  { name: "TfL", patterns: ["tfl"], category: "Essentials", subcategory: "Transport", confidence: 0.9 },
   
-  // Lifestyle - Gifts
-  { name: "Gift", patterns: ["gift", "present", "gift shop"], category: "Lifestyle", subcategory: "Gifts", confidence: 0.8 },
-  { name: "Charity", patterns: ["charity", "donation", "oxfam", "red cross", "cancer research", "save the children"], category: "Lifestyle", subcategory: "Gifts", confidence: 0.9 },
-  { name: "Greeting Cards", patterns: ["card", "card shop", "card factory", "clintons"], category: "Lifestyle", subcategory: "Gifts", confidence: 0.9 },
-  
-  // Lifestyle - Subscriptions (beyond streaming)
-  { name: "Software", patterns: ["software", "subscription", "microsoft", "adobe", "app store", "google play", "apple store"], category: "Lifestyle", subcategory: "Subscriptions", confidence: 0.9 },
-  { name: "Magazine", patterns: ["magazine", "publication", "subscription"], category: "Lifestyle", subcategory: "Subscriptions", confidence: 0.9 },
-  { name: "Membership", patterns: ["membership", "subscription"], category: "Lifestyle", subcategory: "Subscriptions", confidence: 0.8 },
-  
-  // Lifestyle - Hobbies
-  { name: "Gym", patterns: ["gym", "fitness", "exercise", "pure gym", "virgin active", "david lloyd", "leisure centre"], category: "Lifestyle", subcategory: "Hobbies", confidence: 0.9 },
-  { name: "Sports", patterns: ["sports", "sporting goods", "decathlon", "sports direct"], category: "Lifestyle", subcategory: "Hobbies", confidence: 0.9 },
-  { name: "Arts", patterns: ["art", "craft", "hobby", "hobbycraft"], category: "Lifestyle", subcategory: "Hobbies", confidence: 0.9 },
-  { name: "Gaming", patterns: ["game", "playstation", "xbox", "nintendo", "steam", "gaming"], category: "Lifestyle", subcategory: "Hobbies", confidence: 0.9 },
-  
-  // Savings
-  { name: "Emergency Fund", patterns: ["emergency fund", "rainy day", "emergency savings"], category: "Savings", subcategory: "Emergency Fund", confidence: 0.95 },
-  { name: "Retirement", patterns: ["retirement", "pension", "sipp", "annuity"], category: "Savings", subcategory: "Retirement", confidence: 0.95 },
-  { name: "Investment", patterns: ["investment", "investing", "vanguard", "fidelity", "stocks", "shares", "bond", "fund", "isa"], category: "Savings", subcategory: "Investment", confidence: 0.95 },
-  { name: "Property", patterns: ["property investment", "real estate", "house deposit", "down payment"], category: "Savings", subcategory: "Property", confidence: 0.9 },
-  { name: "Education", patterns: ["education", "tuition", "school", "university", "course", "learning"], category: "Savings", subcategory: "Education", confidence: 0.9 },
-  { name: "Goal", patterns: ["goal", "target", "milestone", "future"], category: "Savings", subcategory: "Future Goals", confidence: 0.8 }
+  // Essentials - Housing
+  { name: "Rent", patterns: ["rent payment"], category: "Essentials", subcategory: "Housing", confidence: 0.95 },
+  { name: "Mortgage", patterns: ["mortgage payment"], category: "Essentials", subcategory: "Housing", confidence: 0.95 }
 ];
 
 // Transaction learning cache to improve future categorizations
@@ -426,4 +343,150 @@ export function calculateConfidenceScore(
 // Initialize the categorization module
 export function initCategorizationEngine(): void {
   loadTransactionLearningCache();
+}
+
+// Function to categorize a transaction based on description and amount
+export function categorizeTransaction(description: string, amount: number): { category: string; subcategory: string; type: string } {
+  const normalizedDescription = normalizeText(description);
+  const merchantMatch = findCategoryFromMerchants(normalizedDescription);
+  const type = amount >= 0 ? 'income' : 'expense';
+
+  // For income transactions
+  if (type === 'income') {
+    if (merchantMatch) {
+      // Special case for investment income
+      if (merchantMatch.subcategory === 'Investments') {
+        return {
+          category: 'Income',
+          subcategory: 'Investments',
+          type: 'income'
+        };
+      }
+      return {
+        category: merchantMatch.category,
+        subcategory: merchantMatch.subcategory,
+        type: 'income'
+      };
+    }
+    // Default income categorization
+    return {
+      category: 'Income',
+      subcategory: 'Other Income',
+      type: 'income'
+    };
+  }
+
+  // For expense transactions
+  if (merchantMatch) {
+    return {
+      category: merchantMatch.category,
+      subcategory: merchantMatch.subcategory,
+      type: 'expense'
+    };
+  }
+
+  // Default expense categorization
+  return {
+    category: 'Other',
+    subcategory: 'Uncategorized',
+    type: 'expense'
+  };
+}
+
+// Function to extract payment method from transaction description
+export function extractPaymentMethod(description: string): string | null {
+  const normalizedDesc = normalizeText(description);
+  
+  // Order matters for digital payments to ensure correct matching
+  const orderedPaymentMethods = [
+    ['Apple Pay', ['apple pay']],
+    ['Google Pay', ['google pay']],
+    ['Samsung Pay', ['samsung pay']],
+    ['PayPal', ['paypal', 'pp']],
+    ['Direct Debit', ['direct debit']],
+    ['Bank Transfer', ['transfer', 'bank transfer', 'standing order', 'faster payment']],
+    ['Credit Card', ['credit card', 'visa', 'mastercard', 'amex']],
+    ['Debit Card', ['debit card', 'visa debit', 'maestro', 'card payment']],
+    ['Cash', ['cash', 'atm', 'withdrawal']]
+  ] as const;
+
+  for (const [method, patterns] of orderedPaymentMethods) {
+    if (patterns.some(pattern => normalizedDesc.includes(pattern))) {
+      return method;
+    }
+  }
+
+  return null;
+}
+
+// Function to get default category based on keyword
+export function getDefaultCategoryForKeyword(keyword: string): [string, string, string] | null {
+  const normalizedKeyword = normalizeText(keyword);
+  
+  // Common keywords mapping
+  const keywordMap: Record<string, [string, string, string]> = {
+    // Income keywords
+    'salary': ['Income', 'Salary', 'income'],
+    'dividend': ['Income', 'Investments', 'income'],
+    'freelance': ['Income', 'Freelance', 'income'],
+    'interest': ['Income', 'Investments', 'income'],
+    
+    // Expense keywords - Utilities
+    'electricity': ['Essentials', 'Utilities', 'expense'],
+    'electric': ['Essentials', 'Utilities', 'expense'],
+    'gas': ['Essentials', 'Utilities', 'expense'],
+    'water': ['Essentials', 'Utilities', 'expense'],
+    'utilities': ['Essentials', 'Utilities', 'expense'],
+    'internet': ['Essentials', 'Utilities', 'expense'],
+    'broadband': ['Essentials', 'Utilities', 'expense'],
+    'phone': ['Essentials', 'Utilities', 'expense'],
+    'council tax': ['Essentials', 'Utilities', 'expense'],
+    
+    // Expense keywords - Housing
+    'rent': ['Essentials', 'Housing', 'expense'],
+    'mortgage': ['Essentials', 'Housing', 'expense'],
+    'housing': ['Essentials', 'Housing', 'expense'],
+    'property': ['Essentials', 'Housing', 'expense'],
+    
+    // Expense keywords - Entertainment
+    'netflix': ['Lifestyle', 'Entertainment', 'expense'],
+    'spotify': ['Lifestyle', 'Entertainment', 'expense'],
+    'cinema': ['Lifestyle', 'Entertainment', 'expense'],
+    'movie': ['Lifestyle', 'Entertainment', 'expense'],
+    'theatre': ['Lifestyle', 'Entertainment', 'expense'],
+    'concert': ['Lifestyle', 'Entertainment', 'expense'],
+    'show': ['Lifestyle', 'Entertainment', 'expense'],
+    'game': ['Lifestyle', 'Entertainment', 'expense'],
+    'entertainment': ['Lifestyle', 'Entertainment', 'expense'],
+    
+    // Other expense keywords
+    'groceries': ['Essentials', 'Groceries', 'expense'],
+    'dining': ['Lifestyle', 'Dining Out', 'expense'],
+    'restaurant': ['Lifestyle', 'Dining Out', 'expense'],
+    'shopping': ['Lifestyle', 'Shopping', 'expense'],
+    'transport': ['Essentials', 'Transport', 'expense'],
+    'amazon': ['Lifestyle', 'Shopping', 'expense'],
+    'mcdonalds': ['Lifestyle', 'Dining Out', 'expense']
+  };
+
+  // Check for exact matches first
+  if (keywordMap[normalizedKeyword]) {
+    return keywordMap[normalizedKeyword];
+  }
+
+  // Check for partial matches
+  for (const [pattern, mapping] of Object.entries(keywordMap)) {
+    if (normalizedKeyword.includes(pattern)) {
+      return mapping;
+    }
+  }
+
+  // Check merchant mappings as a fallback
+  const merchantMatch = findCategoryFromMerchants(normalizedKeyword);
+  if (merchantMatch) {
+    const type = merchantMatch.category === 'Income' ? 'income' : 'expense';
+    return [merchantMatch.category, merchantMatch.subcategory, type];
+  }
+
+  return null;
 }
