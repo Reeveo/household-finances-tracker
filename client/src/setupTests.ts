@@ -1,15 +1,4 @@
-import '@testing-library/jest-dom';
-import { expect, afterEach, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import * as matchers from '@testing-library/jest-dom/matchers';
-
-// Add custom jest-dom matchers
-expect.extend(matchers);
-
-// Clean up after each test
-afterEach(() => {
-  cleanup();
-});
+import { vi } from 'vitest';
 
 class ResizeObserverMock {
   observe() {}
@@ -33,4 +22,4 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
-});
+}); 

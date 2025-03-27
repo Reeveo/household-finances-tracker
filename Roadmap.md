@@ -29,7 +29,13 @@
 - [x] Design database schema
 - [x] Create database migration system
 - [x] Define API endpoints
-- [ ] Set up API documentation (Swagger/OpenAPI)
+- [x] Set up API documentation (Swagger/OpenAPI)
+  - [x] Base Swagger configuration
+  - [x] Interactive documentation UI
+  - [x] API endpoint documentation examples
+  - [ ] Document remaining API endpoints
+  - [ ] Add authentication to documentation UI
+  - [ ] Add API versioning support
 
 ### Sprint 2 (Weeks 3-4)
 #### Authentication System
@@ -46,16 +52,6 @@
 - [x] Set up state management
 - [x] Create basic layouts and templates
 
-## Phase 2: Core Features (Weeks 5-8)
-
-### Sprint 3 (Weeks 5-6)
-#### User Management
-- [ ] Implement user profile tests
-- [x] Create user profile management
-- [x] Add user settings
-- [x] Implement role-based access control
-- [x] Add user preferences storage
-
 #### Financial Data Management
 - [x] Create data model tests
 - [x] Implement income tracking
@@ -66,6 +62,38 @@
   - [x] Category learning system
   - [ ] Category bulk update
 - [x] Set up account balance tracking
+
+#### Transaction Management Refactoring
+- [x] Create types.ts with shared types and constants
+- [ ] Implement component structure:
+  - [x] transaction-filters.tsx (Search and filter components)
+  - [ ] transaction-form.tsx (Form component for adding/editing transactions)
+  - [ ] transaction-table.tsx (Table component for displaying transactions)
+  - [ ] transaction-dialog.tsx (Dialog wrapper for the form)
+  - [ ] index.tsx (Main orchestration component)
+- [ ] Component responsibilities:
+  - [x] transaction-filters.tsx:
+    - [x] Search input
+    - [x] Category filter
+    - [x] Month filter
+    - [x] Reset filters button
+  - [ ] transaction-form.tsx:
+    - [ ] Form fields and validation
+    - [ ] Form submission handling
+    - [ ] Form state management
+  - [ ] transaction-table.tsx:
+    - [ ] Transaction display in table format
+    - [ ] Row actions handling
+    - [ ] Table pagination/virtual scrolling
+  - [ ] transaction-dialog.tsx:
+    - [ ] Dialog wrapper implementation
+    - [ ] Open/close handling
+    - [ ] Form integration
+  - [ ] index.tsx:
+    - [ ] State management
+    - [ ] Component composition
+    - [ ] Data fetching
+    - [ ] Event handling
 
 ### Sprint 4 (Weeks 7-8)
 #### Basic Dashboard
@@ -121,6 +149,20 @@
 
 #### Documentation & Testing
 - [ ] Complete API documentation
+  - [x] Set up Swagger/OpenAPI
+  - [x] Document authentication endpoints
+  - [x] Document transaction endpoints
+    - [x] List transactions (GET /api/transactions)
+    - [x] Create transaction (POST /api/transactions)
+    - [x] Get transaction (GET /api/transactions/{id})
+    - [x] Update transaction (PUT /api/transactions/{id})
+    - [x] Delete transaction (DELETE /api/transactions/{id})
+    - [x] Bulk create transactions (POST /api/transactions/bulk)
+    - [x] Bulk delete transactions (DELETE /api/transactions/bulk)
+  - [ ] Document account endpoints
+  - [ ] Document calculator endpoints
+  - [ ] Document reporting endpoints
+  - [ ] Add API examples and use cases
 - [ ] Write user guides
 - [ ] Create developer documentation
 - [x] Implement end-to-end tests
@@ -188,6 +230,15 @@
 
 ### Documentation Requirements
 - API documentation (OpenAPI/Swagger)
+  - Must follow OpenAPI 3.0.0 specification
+  - All endpoints must be documented with:
+    - Request/response schemas
+    - Authentication requirements
+    - Example requests and responses
+    - Error scenarios
+    - Rate limiting information
+  - Interactive documentation UI must be accessible
+  - Documentation must be versioned with API
 - User guides and tutorials
 - Developer documentation
 - Deployment guides

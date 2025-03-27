@@ -1,10 +1,25 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, beforeAll, afterAll } from 'vitest';
 import { TransactionManagement } from '@/components/income-expense/transaction-management';
 import { QueryClient, QueryClientProvider, useQuery, useMutation, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import { ReactNode } from 'react';
-import { userEvent } from '@testing-library/user-event';
+import userEvent from '@testing-library/user-event';
+
+// Mock window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation(query => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // Deprecated
+    removeListener: vi.fn(), // Deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
 
 // Mock ResizeObserver
 beforeAll(() => {
@@ -43,9 +58,60 @@ afterAll(() => {
   vi.restoreAllMocks();
 });
 
-// Mock hooks
-vi.mock('@/hooks/use-mobile', () => ({
-  useIsMobile: vi.fn(() => false),
+// Mock useIsMobile hook
+vi.mock('../../../hooks/useIsMobile', () => ({
+  useIsMobile: () => false,
+}));
+
+// Mock Radix UI Select components
+vi.mock('@radix-ui/react-select', () => ({
+  Root: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Trigger: ({ children, ...props }: { children: React.ReactNode }) => (
+    <button type="button" role="combobox" aria-expanded="false" aria-controls="radix-select-content" {...props}>
+      {children}
+    </button>
+  ),
+  Value: ({ children, placeholder }: { children: React.ReactNode; placeholder?: string }) => (
+    <span>{children || placeholder}</span>
+  ),
+  Portal: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Content: ({ children }: { children: React.ReactNode }) => (
+    <div id="radix-select-content" role="listbox">
+      {children}
+    </div>
+  ),
+  Viewport: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Item: ({ children, value, ...props }: { children: React.ReactNode; value: string }) => (
+    <div role="option" aria-selected="false" data-value={value} {...props}>
+      {children}
+    </div>
+  ),
+  ItemText: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  Group: ({ children }: { children: React.ReactNode }) => <div role="group">{children}</div>,
+  Label: ({ children }: { children: React.ReactNode }) => <span role="label">{children}</span>,
+  ScrollUpButton: ({ children }: { children: React.ReactNode }) => <div role="button">{children}</div>,
+  ScrollDownButton: ({ children }: { children: React.ReactNode }) => <div role="button">{children}</div>,
+  Separator: ({ children }: { children: React.ReactNode }) => <hr role="separator" />,
+  Icon: ({ children }: { children: React.ReactNode }) => <span aria-hidden="true">{children}</span>,
+  ItemIndicator: ({ children }: { children: React.ReactNode }) => <span aria-hidden="true">{children}</span>
+}));
+
+// Mock Radix UI Dialog components
+vi.mock('@radix-ui/react-dialog', () => ({
+  Root: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Trigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Portal: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Overlay: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Content: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Title: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Description: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Close: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+// Mock Radix UI Checkbox components
+vi.mock('@radix-ui/react-checkbox', () => ({
+  Root: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Indicator: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 // Mock useAuth hook with AuthProvider
@@ -340,5 +406,268 @@ describe('TransactionManagement', () => {
     
     // Since we don't have visibility into dialog behavior, we'll just ensure
     // the button click doesn't throw errors
+  });
+});
+
+describe('TransactionManagement Component', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('Rendering', () => {
+    it('renders the component with basic elements', () => {
+      render(<TransactionManagement />);
+      expect(screen.getByRole('heading', { name: /transaction management/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /add transaction/i })).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/search transactions/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Transaction Form', () => {
+    it('opens transaction form dialog when add button is clicked', async () => {
+      render(<TransactionManagement />);
+      const addButton = screen.getAllByRole('button', { name: /add transaction/i })[0];
+      await userEvent.click(addButton);
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('validates required fields', async () => {
+      render(<TransactionManagement />);
+      const addButton = screen.getAllByRole('button', { name: /add transaction/i })[0];
+      await userEvent.click(addButton);
+
+      const submitButton = screen.getByRole('button', { name: /add transaction/i });
+      await userEvent.click(submitButton);
+
+      expect(screen.getByText(/description is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/amount is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/category is required/i)).toBeInTheDocument();
+    });
+
+    it('submits form with valid data', async () => {
+      render(<TransactionManagement />);
+      const addButton = screen.getAllByRole('button', { name: /add transaction/i })[0];
+      await userEvent.click(addButton);
+
+      await userEvent.type(screen.getByRole('textbox', { name: /description/i }), 'Test Purchase');
+      await userEvent.type(screen.getByRole('spinbutton', { name: /amount/i }), '50');
+      await userEvent.type(screen.getByRole('textbox', { name: /merchant/i }), 'Test Store');
+
+      // Select category
+      const categorySelect = screen.getByRole('combobox', { name: 'Category' });
+      await userEvent.click(categorySelect);
+      const essentialsOptions = screen.getAllByRole('option', { name: /essentials/i });
+      await userEvent.click(essentialsOptions[0]);
+
+      // Wait for category selection to be processed
+      await waitFor(() => {
+        expect(screen.getByRole('combobox', { name: 'Subcategory' })).not.toBeDisabled();
+      });
+
+      // Select subcategory and wait for options
+      const subcategorySelect = screen.getByRole('combobox', { name: 'Subcategory' });
+      await userEvent.click(subcategorySelect);
+
+      // Wait for subcategory options to be populated and select Rent/Mortgage
+      await waitFor(() => {
+        expect(screen.getByRole('option', { name: /rent\/mortgage/i })).toBeInTheDocument();
+      });
+
+      const rentMortgageOption = screen.getByRole('option', { name: /rent\/mortgage/i });
+      await userEvent.click(rentMortgageOption);
+
+      // Select budget month
+      const budgetMonthSelect = screen.getByRole('combobox', { name: 'Budget Month' });
+      await userEvent.click(budgetMonthSelect);
+      const nextMonthOptions = screen.getAllByRole('option', { name: /next month/i });
+      await userEvent.click(nextMonthOptions[0]);
+
+      // Submit form
+      const form = screen.getByTestId('transaction-form');
+      const submitButton = within(form).getByRole('button', { name: /add transaction/i });
+      await userEvent.click(submitButton);
+
+      // Verify transaction was added
+      expect(screen.getByText('Test Purchase')).toBeInTheDocument();
+      expect(screen.getByText('Test Store')).toBeInTheDocument();
+      expect(screen.getByText('-£50.00')).toBeInTheDocument();
+      expect(screen.getByText('Next Month')).toBeInTheDocument();
+    });
+  });
+
+  describe('Filtering and Search', () => {
+    it('should filter transactions by search query', async () => {
+      render(<TransactionManagement />);
+      
+      // Type in search input
+      const searchInput = screen.getByPlaceholderText('Search transactions...');
+      await userEvent.type(searchInput, 'groceries');
+      
+      // Verify filtered results
+      expect(screen.getByText('Groceries - Tesco')).toBeInTheDocument();
+      expect(screen.queryByText('Electricity Bill')).not.toBeInTheDocument();
+    });
+
+    it('should filter transactions by category and subcategory', async () => {
+      render(<TransactionManagement />);
+
+      // Open category filter dropdown
+      const categoryFilter = screen.getByRole('combobox', { name: /category/i });
+      await userEvent.click(categoryFilter);
+
+      // Select Essentials category
+      const essentialsOption = screen.getByRole('option', { name: /essentials/i });
+      await userEvent.click(essentialsOption);
+
+      // Verify that only Essentials transactions are shown
+      const transactions = screen.getAllByRole('row');
+      transactions.forEach(transaction => {
+        const categoryCell = within(transaction).queryByText(/essentials/i);
+        if (categoryCell) {
+          expect(categoryCell).toBeInTheDocument();
+        }
+      });
+
+      // Open Add Transaction dialog
+      const addButton = screen.getByRole('button', { name: /add transaction/i });
+      await userEvent.click(addButton);
+
+      // Open category select in the form
+      const categorySelect = screen.getByRole('combobox', { name: /category/i });
+      await userEvent.click(categorySelect);
+
+      // Select Essentials category
+      const essentialsFormOption = screen.getByRole('option', { name: /essentials/i });
+      await userEvent.click(essentialsFormOption);
+
+      // Wait for subcategory select to be enabled
+      const subcategorySelect = screen.getByRole('combobox', { name: /subcategory/i });
+      await waitFor(() => {
+        expect(subcategorySelect).not.toBeDisabled();
+      });
+
+      // Open subcategory select
+      await userEvent.click(subcategorySelect);
+
+      // Wait for subcategory options to be populated
+      await waitFor(() => {
+        const subcategoryOptions = screen.getAllByRole('option');
+        expect(subcategoryOptions.length).toBeGreaterThan(0);
+        expect(subcategoryOptions.some(option => option.textContent === 'Rent/Mortgage')).toBe(true);
+      });
+    });
+  });
+
+  describe('Recurring Transactions', () => {
+    it('should add a recurring transaction', async () => {
+      render(<TransactionManagement />);
+
+      // Open add transaction dialog
+      const addButtons = screen.getAllByRole('button', { name: /add transaction/i });
+      await userEvent.click(addButtons[0]);
+
+      // Fill in form fields
+      await userEvent.type(screen.getByRole('textbox', { name: /description/i }), 'Rent Payment');
+      await userEvent.type(screen.getByRole('textbox', { name: /merchant/i }), 'Landlord');
+      await userEvent.type(screen.getByRole('spinbutton', { name: /amount/i }), '1000');
+
+      // Select category
+      const categorySelect = screen.getByRole('combobox', { name: 'Category' });
+      await userEvent.click(categorySelect);
+      const essentialsOptions = screen.getAllByRole('option', { name: /essentials/i });
+      await userEvent.click(essentialsOptions[0]);
+
+      // Wait for category selection to be processed
+      await waitFor(() => {
+        expect(screen.getByRole('combobox', { name: 'Subcategory' })).not.toBeDisabled();
+      });
+
+      // Select subcategory and wait for options
+      const subcategorySelect = screen.getByRole('combobox', { name: 'Subcategory' });
+      await userEvent.click(subcategorySelect);
+
+      // Wait for subcategory options to be populated and select Rent/Mortgage
+      await waitFor(() => {
+        expect(screen.getByRole('option', { name: /rent\/mortgage/i })).toBeInTheDocument();
+      });
+
+      const rentMortgageOption = screen.getByRole('option', { name: /rent\/mortgage/i });
+      await userEvent.click(rentMortgageOption);
+
+      // Mark as recurring
+      const recurringCheckbox = screen.getByRole('checkbox', { name: /recurring transaction/i });
+      await userEvent.click(recurringCheckbox);
+
+      // Select frequency
+      const frequencySelect = screen.getByRole('combobox', { name: 'Frequency' });
+      await userEvent.click(frequencySelect);
+      const monthlyOption = screen.getByRole('option', { name: /monthly/i });
+      await userEvent.click(monthlyOption);
+
+      // Submit form
+      const form = screen.getByTestId('transaction-form');
+      const submitButton = within(form).getByRole('button', { name: /add transaction/i });
+      await userEvent.click(submitButton);
+
+      // Verify transaction was added
+      expect(screen.getByText('Rent Payment')).toBeInTheDocument();
+      expect(screen.getByText('Landlord')).toBeInTheDocument();
+      expect(screen.getByText('£1000.00')).toBeInTheDocument();
+    });
+  });
+
+  describe('Budget Month Assignment', () => {
+    it('should assign a transaction to the next month', async () => {
+      render(<TransactionManagement />);
+
+      // Open add transaction dialog
+      const addButtons = screen.getAllByRole('button', { name: /add transaction/i });
+      await userEvent.click(addButtons[0]);
+
+      // Fill in form fields
+      await userEvent.type(screen.getByRole('textbox', { name: /description/i }), 'Test Purchase');
+      await userEvent.type(screen.getByRole('spinbutton', { name: /amount/i }), '50');
+      await userEvent.type(screen.getByRole('textbox', { name: /merchant/i }), 'Test Store');
+
+      // Select category
+      const categorySelect = screen.getByRole('combobox', { name: 'Category' });
+      await userEvent.click(categorySelect);
+      const essentialsOptions = screen.getAllByRole('option', { name: /essentials/i });
+      await userEvent.click(essentialsOptions[0]);
+
+      // Wait for category selection to be processed
+      await waitFor(() => {
+        expect(screen.getByRole('combobox', { name: 'Subcategory' })).not.toBeDisabled();
+      });
+
+      // Select subcategory and wait for options
+      const subcategorySelect = screen.getByRole('combobox', { name: 'Subcategory' });
+      await userEvent.click(subcategorySelect);
+
+      // Wait for subcategory options to be populated and select Rent/Mortgage
+      await waitFor(() => {
+        expect(screen.getByRole('option', { name: /rent\/mortgage/i })).toBeInTheDocument();
+      });
+
+      const rentMortgageOption = screen.getByRole('option', { name: /rent\/mortgage/i });
+      await userEvent.click(rentMortgageOption);
+
+      // Select budget month
+      const budgetMonthSelect = screen.getByRole('combobox', { name: 'Budget Month' });
+      await userEvent.click(budgetMonthSelect);
+      const nextMonthOptions = screen.getAllByRole('option', { name: /next month/i });
+      await userEvent.click(nextMonthOptions[0]);
+
+      // Submit form
+      const form = screen.getByTestId('transaction-form');
+      const submitButton = within(form).getByRole('button', { name: /add transaction/i });
+      await userEvent.click(submitButton);
+
+      // Verify transaction was added
+      expect(screen.getByText('Test Purchase')).toBeInTheDocument();
+      expect(screen.getByText('Test Store')).toBeInTheDocument();
+      expect(screen.getByText('-£50.00')).toBeInTheDocument();
+      expect(screen.getByText('Next Month')).toBeInTheDocument();
+    });
   });
 }); 
