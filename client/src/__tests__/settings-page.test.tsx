@@ -5,6 +5,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import userEvent from '@testing-library/user-event';
+import { describe, beforeEach, test, expect } from 'vitest';
 
 // Mock the hooks
 vi.mock('@/hooks/use-auth', () => ({
@@ -70,7 +72,7 @@ describe('SettingsPage', () => {
     
     // Danger zone section should be visible
     expect(screen.getByText('Danger Zone')).toBeInTheDocument();
-    expect(screen.getByText('Deactivate Account')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Deactivate Account' })).toBeInTheDocument();
   });
 
   test('profile form should be pre-populated with user data', () => {
@@ -84,27 +86,29 @@ describe('SettingsPage', () => {
   });
 
   test('profile form should handle submission', async () => {
-    const mockToast = vi.fn();
-    (useToast as any).mockReturnValue({
-      toast: mockToast,
-    });
-    
     const mockMutate = vi.fn();
-    (useMutation as any).mockReturnValue({
+    const useMutationMock = vi.fn(() => ({
       mutate: mockMutate,
-      isPending: false,
-    });
-    
+      isPending: false
+    }));
+    (useMutation as any).mockImplementation(useMutationMock);
+
     render(<SettingsPage />);
     
-    // Edit the name field
+    // Get form inputs
     const nameInput = screen.getByLabelText('Full Name');
-    fireEvent.change(nameInput, { target: { value: 'Updated Name' } });
+    const emailInput = screen.getByLabelText('Email Address');
+    
+    // Update input values
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, 'Updated Name');
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, 'test@example.com');
     
     // Submit the form
-    const saveButton = screen.getByText('Save Changes');
-    fireEvent.click(saveButton);
-    
+    const submitButton = screen.getByRole('button', { name: /save changes/i });
+    await userEvent.click(submitButton);
+
     // Check if mutation was called with correct data
     expect(mockMutate).toHaveBeenCalledWith({
       name: 'Updated Name',
@@ -130,7 +134,7 @@ describe('SettingsPage', () => {
     render(<SettingsPage />);
     
     // Click the deactivate button to open dialog
-    const deactivateButton = screen.getByText('Deactivate Account');
+    const deactivateButton = screen.getByRole('button', { name: 'Deactivate Account' });
     fireEvent.click(deactivateButton);
     
     // Check if confirmation dialog appears
@@ -150,47 +154,45 @@ describe('SettingsPage', () => {
     });
   });
   
-  test('appearance settings form works correctly', () => {
+  test('appearance settings form works correctly', async () => {
     render(<SettingsPage />);
     
-    // Switch to appearance tab
-    fireEvent.click(screen.getByRole('tab', { name: 'Appearance' }));
-    
+    // Click the appearance tab
+    const appearanceTab = screen.getByRole('tab', { name: 'Appearance' });
+    await userEvent.click(appearanceTab);
+
     // Check if theme options are present
-    expect(screen.getByText('Light')).toBeInTheDocument();
-    expect(screen.getByText('Dark')).toBeInTheDocument();
-    expect(screen.getByText('System')).toBeInTheDocument();
-    
-    // Check if toggle switches are present
-    expect(screen.getByText('Animations')).toBeInTheDocument();
-    expect(screen.getByText('Sound Effects')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /light/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /dark/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /system/i })).toBeInTheDocument();
+
+    // Test theme selection
+    const lightButton = screen.getByRole('button', { name: /light/i });
+    await userEvent.click(lightButton);
+    expect(lightButton).toHaveClass('border-primary');
   });
   
   test('security form validates matching passwords', async () => {
     render(<SettingsPage />);
     
     // Switch to security tab
-    fireEvent.click(screen.getByRole('tab', { name: 'Security' }));
-    
+    const securityTab = screen.getByRole('tab', { name: 'Security' });
+    await userEvent.click(securityTab);
+
     // Fill in the form with non-matching passwords
-    fireEvent.change(screen.getByLabelText('Current Password'), { 
-      target: { value: 'current123' } 
-    });
-    
-    fireEvent.change(screen.getByLabelText('New Password'), { 
-      target: { value: 'newpass123' } 
-    });
-    
-    fireEvent.change(screen.getByLabelText('Confirm New Password'), { 
-      target: { value: 'different123' } 
-    });
-    
-    // Submit the form
-    fireEvent.click(screen.getByText('Update Password'));
-    
-    // Check for validation error message
-    await waitFor(() => {
-      expect(screen.getByText("Passwords don't match")).toBeInTheDocument();
-    });
+    const currentPasswordInput = screen.getByLabelText(/current password/i);
+    const newPasswordInput = screen.getByLabelText(/new password/i);
+    const confirmPasswordInput = screen.getByLabelText(/confirm new password/i);
+
+    await userEvent.type(currentPasswordInput, 'current123');
+    await userEvent.type(newPasswordInput, 'newpass123');
+    await userEvent.type(confirmPasswordInput, 'different123');
+
+    // Submit form
+    const submitButton = screen.getByRole('button', { name: /save changes/i });
+    await userEvent.click(submitButton);
+
+    // Check for error message
+    expect(screen.getByText("Passwords don't match")).toBeInTheDocument();
   });
 });

@@ -1,12 +1,29 @@
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { vi } from 'vitest';
-import SettingsPage from '../pages/settings-page';
+import userEvent from '@testing-library/user-event';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { renderWithProviders } from './test-utils';
 import { apiRequest } from '@/lib/queryClient';
+import SettingsPage from '@/pages/settings-page';
+
+// Mock the modules
+vi.mock('@/hooks/use-auth');
+vi.mock('@/hooks/use-toast');
+vi.mock('@/hooks/use-mobile');
+vi.mock('@tanstack/react-query');
+vi.mock('@/lib/queryClient');
+
+// Mock ResizeObserver
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+global.ResizeObserver = ResizeObserverMock;
 
 // Mock the hooks
 vi.mock('@/hooks/use-auth', () => ({
@@ -42,6 +59,11 @@ vi.mock('@/lib/queryClient', () => ({
   apiRequest: vi.fn(),
 }));
 
+interface MutationCallbacks {
+  onSuccess?: (data?: any) => void;
+  onError?: (error?: any) => void;
+}
+
 describe('SettingsPage Enhanced Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -62,11 +84,8 @@ describe('SettingsPage Enhanced Tests', () => {
     
     (useIsMobile as any).mockReturnValue(false);
     
-    // Reset mutation mock
-    (useMutation as any).mockImplementation(({ onSuccess, onError }) => ({
-      mutate: (data: any) => {
-        onSuccess && onSuccess();
-      },
+    (useMutation as any).mockImplementation(({ onSuccess, onError }: MutationCallbacks) => ({
+      mutate: vi.fn(),
       isPending: false,
       isError: false,
       error: null,
@@ -395,7 +414,7 @@ describe('SettingsPage Enhanced Tests', () => {
       render(<SettingsPage />);
       
       // Click the deactivate button to open dialog
-      const deactivateButton = screen.getByText('Deactivate Account');
+      const deactivateButton = screen.getByRole('button', { name: /deactivate account/i });
       fireEvent.click(deactivateButton);
       
       // Check if confirmation dialog appears
@@ -432,7 +451,7 @@ describe('SettingsPage Enhanced Tests', () => {
       render(<SettingsPage />);
       
       // Click the deactivate button to open dialog
-      const deactivateButton = screen.getByText('Deactivate Account');
+      const deactivateButton = screen.getByRole('button', { name: /deactivate account/i });
       fireEvent.click(deactivateButton);
       
       // Type the confirmation text
@@ -464,7 +483,7 @@ describe('SettingsPage Enhanced Tests', () => {
       render(<SettingsPage />);
       
       // Click the deactivate button to open dialog
-      const deactivateButton = screen.getByText('Deactivate Account');
+      const deactivateButton = screen.getByRole('button', { name: /deactivate account/i });
       fireEvent.click(deactivateButton);
       
       // Type the confirmation text
@@ -522,7 +541,7 @@ describe('SettingsPage Enhanced Tests', () => {
       expect(systemThemeInput).toBeInTheDocument();
     });
     
-    test('tab navigation works correctly', () => {
+    test('tab navigation works correctly', async () => {
       render(<SettingsPage />);
       
       // Test that we can tab through the form fields in the profile tab
@@ -531,7 +550,7 @@ describe('SettingsPage Enhanced Tests', () => {
       expect(document.activeElement).toBe(nameInput);
       
       // Tab to the next field
-      fireEvent.keyDown(nameInput, { key: 'Tab', code: 'Tab' });
+      await userEvent.tab();
       
       // Email should now be focused
       const emailInput = screen.getByLabelText('Email Address');

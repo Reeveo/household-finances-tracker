@@ -370,11 +370,7 @@ export default function SettingsPage() {
                           <FormItem>
                             <FormLabel>Current Password</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="password" 
-                                placeholder="••••••••" 
-                                {...field} 
-                              />
+                              <Input type="password" placeholder="••••••••" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -388,15 +384,8 @@ export default function SettingsPage() {
                           <FormItem>
                             <FormLabel>New Password</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="password" 
-                                placeholder="••••••••" 
-                                {...field} 
-                              />
+                              <Input type="password" placeholder="••••••••" {...field} />
                             </FormControl>
-                            <FormDescription>
-                              Password must be at least 8 characters
-                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -409,11 +398,7 @@ export default function SettingsPage() {
                           <FormItem>
                             <FormLabel>Confirm New Password</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="password" 
-                                placeholder="••••••••" 
-                                {...field} 
-                              />
+                              <Input type="password" placeholder="••••••••" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

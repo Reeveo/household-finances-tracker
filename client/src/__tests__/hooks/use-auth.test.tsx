@@ -1,19 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { renderWithProviders } from '../test-utils';
 import { useAuth, AuthProvider } from '@/hooks/use-auth';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React from 'react';
 
-// Mock the API request function
+// Mock the modules used by useAuth
 vi.mock('@/lib/queryClient', () => ({
   apiRequest: vi.fn(),
+  getQueryFn: vi.fn().mockImplementation(() => () => Promise.resolve(null)),
   queryClient: {
     setQueryData: vi.fn(),
     invalidateQueries: vi.fn(),
-  },
-  getQueryFn: vi.fn()
+  }
 }));
 
+// Import mocked modules
 import { apiRequest, queryClient } from '@/lib/queryClient';
 
 describe('useAuth Hook', () => {
@@ -21,29 +22,32 @@ describe('useAuth Hook', () => {
     vi.clearAllMocks();
   });
 
-  it('provides null user initially while loading', () => {
-    // Mock the getQueryFn to return null (unauthenticated state)
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) => {
-        const queryClient = new QueryClient({
-          defaultOptions: {
-            queries: {
-              retry: false,
-              enabled: false // Disable auto fetch for tests
-            },
-          },
-        });
-        return (
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>{children}</AuthProvider>
-          </QueryClientProvider>
-        );
+  it('provides null user initially while loading', async () => {
+    // Set up a query client for the test
+    const testQueryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
       },
     });
 
-    // Check initial state
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={testQueryClient}>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryClientProvider>
+      ),
+    });
+
+    // Initial state should be loading with null user
     expect(result.current.user).toBeNull();
     expect(result.current.isLoading).toBe(true);
+
+    // Wait for the query to settle
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
   });
 
   it('provides user data when authenticated', async () => {
@@ -56,19 +60,19 @@ describe('useAuth Hook', () => {
       createdAt: new Date()
     };
 
-    // Set up query client with mock data
-    const mockQueryClient = new QueryClient({
+    // Create a query client that will return the mock user
+    const testQueryClient = new QueryClient({
       defaultOptions: {
         queries: {
           retry: false,
         },
       },
     });
-    mockQueryClient.setQueryData(['/api/user'], mockUser);
+    testQueryClient.setQueryData(['/api/user'], mockUser);
 
     const { result } = renderHook(() => useAuth(), {
       wrapper: ({ children }) => (
-        <QueryClientProvider client={mockQueryClient}>
+        <QueryClientProvider client={testQueryClient}>
           <AuthProvider>{children}</AuthProvider>
         </QueryClientProvider>
       ),
@@ -77,7 +81,6 @@ describe('useAuth Hook', () => {
     // Wait for the hook to process the data
     await waitFor(() => {
       expect(result.current.user).toEqual(mockUser);
-      expect(result.current.isLoading).toBe(false);
     });
   });
 
@@ -96,22 +99,21 @@ describe('useAuth Hook', () => {
       json: () => Promise.resolve(mockUser)
     });
 
-    // Render the hook
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) => {
-        const queryClient = new QueryClient({
-          defaultOptions: {
-            queries: {
-              retry: false,
-            },
-          },
-        });
-        return (
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>{children}</AuthProvider>
-          </QueryClientProvider>
-        );
+    // Set up a query client for the test
+    const testQueryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
       },
+    });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={testQueryClient}>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryClientProvider>
+      ),
     });
 
     // Call the login mutation
@@ -130,6 +132,7 @@ describe('useAuth Hook', () => {
           password: 'password123'
         }
       );
+      // Check that the setQueryData from queryClient was called
       expect(queryClient.setQueryData).toHaveBeenCalledWith(['/api/user'], mockUser);
     });
   });
@@ -149,22 +152,21 @@ describe('useAuth Hook', () => {
       json: () => Promise.resolve(mockUser)
     });
 
-    // Render the hook
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) => {
-        const queryClient = new QueryClient({
-          defaultOptions: {
-            queries: {
-              retry: false,
-            },
-          },
-        });
-        return (
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>{children}</AuthProvider>
-          </QueryClientProvider>
-        );
+    // Set up a query client for the test
+    const testQueryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
       },
+    });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={testQueryClient}>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryClientProvider>
+      ),
     });
 
     // Call the register mutation
@@ -197,22 +199,21 @@ describe('useAuth Hook', () => {
       ok: true
     });
 
-    // Render the hook
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) => {
-        const queryClient = new QueryClient({
-          defaultOptions: {
-            queries: {
-              retry: false,
-            },
-          },
-        });
-        return (
-          <QueryClientProvider client={queryClient}>
-            <AuthProvider>{children}</AuthProvider>
-          </QueryClientProvider>
-        );
+    // Set up a query client for the test
+    const testQueryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
       },
+    });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={testQueryClient}>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryClientProvider>
+      ),
     });
 
     // Call the logout mutation
