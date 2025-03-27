@@ -49,7 +49,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CalendarIcon, Search, Plus, Filter, RefreshCcw, Edit, Calendar } from "lucide-react";
+import { CalendarIcon, Search, Plus, Filter, RefreshCcw, Edit, Calendar, CheckSquare } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -58,6 +58,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "@/components/ui/use-toast";
 
 // Month options for budget assignment - dynamically generated
 const getMonthOptions = () => {
@@ -251,13 +252,25 @@ type Transaction = {
   notes: string;
 };
 
+// Add this type definition after other types
+interface BulkEditFormValues {
+  category?: string;
+  subcategory?: string;
+  budgetMonth?: string;
+  isRecurring?: boolean;
+  frequency?: string;
+}
+
 export function TransactionManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [monthFilter, setMonthFilter] = useState("All");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [bulkEditMode, setBulkEditMode] = useState(false);
+  const [selectedTransactions, setSelectedTransactions] = useState<number[]>([]);
   const [localTransactions, setLocalTransactions] = useState<Transaction[]>(transactions);
+  const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
 
   // Form for adding/editing transactions
   const form = useForm<TransactionFormValues>({
@@ -274,6 +287,11 @@ export function TransactionManagement() {
       budgetMonth: "current",
       notes: "",
     }
+  });
+
+  // Add this form for bulk edits
+  const bulkEditForm = useForm<BulkEditFormValues>({
+    defaultValues: {}
   });
 
   // Reset form when dialog opens/closes
@@ -395,24 +413,119 @@ export function TransactionManagement() {
   // Get isMobile from useIsMobile hook
   const isMobileState = useIsMobile();
 
+  const toggleTransactionSelection = (id: number) => {
+    setSelectedTransactions(prev => 
+      prev.includes(id) 
+        ? prev.filter(transId => transId !== id)
+        : [...prev, id]
+    );
+  };
+
+  const toggleAllTransactions = () => {
+    if (selectedTransactions.length === filteredTransactions.length) {
+      setSelectedTransactions([]);
+    } else {
+      setSelectedTransactions(filteredTransactions.map(t => t.id));
+    }
+  };
+
+  // Add this near the filters section
+  const handleExitBulkEdit = () => {
+    setBulkEditMode(false);
+    setSelectedTransactions([]);
+  };
+
+  // Add this function to handle bulk updates
+  const handleBulkEdit = async (data: BulkEditFormValues) => {
+    try {
+      // Remove undefined values
+      const updates = Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined)
+      );
+      
+      if (Object.keys(updates).length === 0) {
+        return; // No fields to update
+      }
+
+      const response = await fetch('/api/transactions/bulk/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          transactions: selectedTransactions.map(id => ({
+            id,
+            ...updates
+          }))
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update transactions');
+      }
+
+      const result = await response.json();
+      
+      // Update local state with the changes
+      setLocalTransactions(prev => 
+        prev.map(t => {
+          if (selectedTransactions.includes(t.id)) {
+            return { ...t, ...updates };
+          }
+          return t;
+        })
+      );
+
+      // Close dialogs and reset selection
+      setShowBulkEditDialog(false);
+      handleExitBulkEdit();
+      
+      // Show success message
+      toast({
+        title: "Success",
+        description: `Updated ${result.updated.length} transactions${
+          result.failed.length > 0 ? `. ${result.failed.length} failed.` : ''
+        }`,
+      });
+    } catch (error) {
+      console.error('Bulk update error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update transactions. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Card className="shadow-sm relative">
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
         <CardTitle className="text-xl font-bold">Transaction Management</CardTitle>
-        <Button
-          onClick={() => handleDialogChange(true)}
-          className={`flex items-center ${isMobileState ? 'fixed bottom-6 right-6 z-50 rounded-full shadow-lg w-12 h-12 p-0 justify-center' : ''}`}
-          size={isMobileState ? "icon" : "default"}
-        >
-          {isMobileState ? (
-            <Plus className="h-6 w-6" />
-          ) : (
-            <>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Transaction
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={bulkEditMode ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setBulkEditMode(!bulkEditMode)}
+          >
+            <CheckSquare className="h-4 w-4 mr-1.5" />
+            {bulkEditMode ? "Exit Bulk Edit" : "Bulk Edit"}
+          </Button>
+          <DialogTrigger asChild>
+            <Button
+              className={`flex items-center ${isMobileState ? 'fixed bottom-6 right-6 z-50 rounded-full shadow-lg w-12 h-12 p-0 justify-center' : ''}`}
+              size={isMobileState ? "icon" : "default"}
+            >
+              {isMobileState ? (
+                <Plus className="h-6 w-6" />
+              ) : (
+                <>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Transaction
+                </>
+              )}
+            </Button>
+          </DialogTrigger>
+        </div>
       </CardHeader>
       
       <CardContent className="p-3 sm:p-5">
@@ -478,6 +591,28 @@ export function TransactionManagement() {
               Reset
             </Button>
           </div>
+          
+          {bulkEditMode && selectedTransactions.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {selectedTransactions.length} selected
+              </span>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => {/* TODO: Implement bulk edit */}}
+              >
+                Edit Selected
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExitBulkEdit}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Transactions Table */}
@@ -485,6 +620,19 @@ export function TransactionManagement() {
           <div className="max-h-[500px] overflow-y-auto">
             <Table>
               <TableHeader className="bg-muted/50 sticky top-0">
+                {bulkEditMode && (
+                  <TableRow>
+                    <TableHead className="w-[40px]">
+                      <Checkbox
+                        checked={
+                          filteredTransactions.length > 0 &&
+                          selectedTransactions.length === filteredTransactions.length
+                        }
+                        onCheckedChange={toggleAllTransactions}
+                      />
+                    </TableHead>
+                  </TableRow>
+                )}
                 <TableRow>
                   <TableHead className="whitespace-nowrap w-[100px]">Date</TableHead>
                   <TableHead className="whitespace-nowrap w-[150px]">Merchant</TableHead>
@@ -497,7 +645,21 @@ export function TransactionManagement() {
               </TableHeader>
               <TableBody>
                 {filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id} className="hover:bg-muted/50">
+                  <TableRow 
+                    key={transaction.id} 
+                    className={cn(
+                      "hover:bg-muted/50",
+                      selectedTransactions.includes(transaction.id) && "bg-muted/30"
+                    )}
+                  >
+                    {bulkEditMode && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedTransactions.includes(transaction.id)}
+                          onCheckedChange={() => toggleTransactionSelection(transaction.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="whitespace-nowrap">
                       <div className="flex items-center">
                         <CalendarIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
@@ -936,6 +1098,175 @@ export function TransactionManagement() {
               <DialogFooter>
                 <Button type="submit">
                   {editingTransaction ? "Save Changes" : "Add Transaction"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add this new dialog for bulk editing */}
+      <Dialog open={showBulkEditDialog} onOpenChange={setShowBulkEditDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Bulk Edit Transactions</DialogTitle>
+            <DialogDescription>
+              Update multiple transactions at once. Only changed fields will be updated.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...bulkEditForm}>
+            <form onSubmit={bulkEditForm.handleSubmit(handleBulkEdit)} className="space-y-4">
+              <FormField
+                control={bulkEditForm.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CATEGORIES.map((category) => (
+                          <SelectItem key={category} value={category}>
+                            {category}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={bulkEditForm.control}
+                name="subcategory"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subcategory</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={!bulkEditForm.watch("category")}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a subcategory" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(SUB_CATEGORIES[bulkEditForm.watch("category") || ""] || []).map(
+                          (subcategory) => (
+                            <SelectItem key={subcategory} value={subcategory}>
+                              {subcategory}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={bulkEditForm.control}
+                name="budgetMonth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Budget Month</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select budget month" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {MONTHS.map((month) => (
+                          <SelectItem key={month.value} value={month.value}>
+                            {month.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={bulkEditForm.control}
+                name="isRecurring"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Recurring Transaction</FormLabel>
+                      <FormDescription>
+                        Mark these transactions as recurring
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {bulkEditForm.watch("isRecurring") && (
+                <FormField
+                  control={bulkEditForm.control}
+                  name="frequency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Frequency</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select frequency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {["Weekly", "Monthly", "Quarterly", "Yearly"].map(
+                            (freq) => (
+                              <SelectItem key={freq} value={freq}>
+                                {freq}
+                              </SelectItem>
+                            )
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowBulkEditDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Update {selectedTransactions.length} Transactions
                 </Button>
               </DialogFooter>
             </form>
