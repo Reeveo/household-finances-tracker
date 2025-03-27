@@ -1015,6 +1015,7 @@ export function CSVImport() {
               type="file"
               accept=".csv"
               className="hidden"
+              data-testid="csv-upload"
               onChange={handleFileUpload}
               disabled={isUploading}
             />
