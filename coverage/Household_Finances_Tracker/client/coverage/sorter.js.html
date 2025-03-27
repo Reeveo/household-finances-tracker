@@ -3,15 +3,15 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for Household_Finances_Tracker/client/src/components/ui/context-menu.tsx</title>
+    <title>Code coverage report for Household_Finances_Tracker/client/coverage/sorter.js</title>
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="../../../../../prettify.css" />
-    <link rel="stylesheet" href="../../../../../base.css" />
-    <link rel="shortcut icon" type="image/x-icon" href="../../../../../favicon.png" />
+    <link rel="stylesheet" href="../../../prettify.css" />
+    <link rel="stylesheet" href="../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style type='text/css'>
         .coverage-summary .sorter {
-            background-image: url(../../../../../sort-arrow-sprite.png);
+            background-image: url(../../../sort-arrow-sprite.png);
         }
     </style>
 </head>
@@ -19,13 +19,13 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../../../../index.html">All files</a> / <a href="index.html">Household_Finances_Tracker/client/src/components/ui</a> context-menu.tsx</h1>
+        <h1><a href="../../../index.html">All files</a> / <a href="index.html">Household_Finances_Tracker/client/coverage</a> sorter.js</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/198</span>
+                <span class='fraction'>0/196</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/198</span>
+                <span class='fraction'>0/196</span>
             </div>
         
             
@@ -259,9 +259,7 @@
 <a name='L194'></a><a href='#L194'>194</a>
 <a name='L195'></a><a href='#L195'>195</a>
 <a name='L196'></a><a href='#L196'>196</a>
-<a name='L197'></a><a href='#L197'>197</a>
-<a name='L198'></a><a href='#L198'>198</a>
-<a name='L199'></a><a href='#L199'>199</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<a name='L197'></a><a href='#L197'>197</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -457,206 +455,202 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >import * as React from "react"</span></span></span>
-<span class="cstat-no" title="statement not covered" >import * as ContextMenuPrimitive from "@radix-ui/react-context-menu"</span>
-<span class="cstat-no" title="statement not covered" >import { Check, ChevronRight, Circle } from "lucide-react"</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >/* eslint-disable */</span></span></span>
+<span class="cstat-no" title="statement not covered" >var addSorting = (function() {</span>
+<span class="cstat-no" title="statement not covered" >    'use strict';</span>
+<span class="cstat-no" title="statement not covered" >    var cols,</span>
+<span class="cstat-no" title="statement not covered" >        currentSort = {</span>
+<span class="cstat-no" title="statement not covered" >            index: 0,</span>
+<span class="cstat-no" title="statement not covered" >            desc: false</span>
+<span class="cstat-no" title="statement not covered" >        };</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >import { cn } from "@/lib/utils"</span>
+<span class="cstat-no" title="statement not covered" >    // returns the summary table element</span>
+<span class="cstat-no" title="statement not covered" >    function getTable() {</span>
+<span class="cstat-no" title="statement not covered" >        return document.querySelector('.coverage-summary');</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    // returns the thead element of the summary table</span>
+<span class="cstat-no" title="statement not covered" >    function getTableHeader() {</span>
+<span class="cstat-no" title="statement not covered" >        return getTable().querySelector('thead tr');</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    // returns the tbody element of the summary table</span>
+<span class="cstat-no" title="statement not covered" >    function getTableBody() {</span>
+<span class="cstat-no" title="statement not covered" >        return getTable().querySelector('tbody');</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    // returns the th element for nth column</span>
+<span class="cstat-no" title="statement not covered" >    function getNthColumn(n) {</span>
+<span class="cstat-no" title="statement not covered" >        return getTableHeader().querySelectorAll('th')[n];</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenu = ContextMenuPrimitive.Root</span>
+<span class="cstat-no" title="statement not covered" >    function onFilterInput() {</span>
+<span class="cstat-no" title="statement not covered" >        const searchValue = document.getElementById('fileSearch').value;</span>
+<span class="cstat-no" title="statement not covered" >        const rows = document.getElementsByTagName('tbody')[0].children;</span>
+<span class="cstat-no" title="statement not covered" >        for (let i = 0; i &lt; rows.length; i++) {</span>
+<span class="cstat-no" title="statement not covered" >            const row = rows[i];</span>
+<span class="cstat-no" title="statement not covered" >            if (</span>
+<span class="cstat-no" title="statement not covered" >                row.textContent</span>
+<span class="cstat-no" title="statement not covered" >                    .toLowerCase()</span>
+<span class="cstat-no" title="statement not covered" >                    .includes(searchValue.toLowerCase())</span>
+<span class="cstat-no" title="statement not covered" >            ) {</span>
+<span class="cstat-no" title="statement not covered" >                row.style.display = '';</span>
+<span class="cstat-no" title="statement not covered" >            } else {</span>
+<span class="cstat-no" title="statement not covered" >                row.style.display = 'none';</span>
+<span class="cstat-no" title="statement not covered" >            }</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuTrigger = ContextMenuPrimitive.Trigger</span>
+<span class="cstat-no" title="statement not covered" >    // loads the search box</span>
+<span class="cstat-no" title="statement not covered" >    function addSearchBox() {</span>
+<span class="cstat-no" title="statement not covered" >        var template = document.getElementById('filterTemplate');</span>
+<span class="cstat-no" title="statement not covered" >        var templateClone = template.content.cloneNode(true);</span>
+<span class="cstat-no" title="statement not covered" >        templateClone.getElementById('fileSearch').oninput = onFilterInput;</span>
+<span class="cstat-no" title="statement not covered" >        template.parentElement.appendChild(templateClone);</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuGroup = ContextMenuPrimitive.Group</span>
+<span class="cstat-no" title="statement not covered" >    // loads all columns</span>
+<span class="cstat-no" title="statement not covered" >    function loadColumns() {</span>
+<span class="cstat-no" title="statement not covered" >        var colNodes = getTableHeader().querySelectorAll('th'),</span>
+<span class="cstat-no" title="statement not covered" >            colNode,</span>
+<span class="cstat-no" title="statement not covered" >            cols = [],</span>
+<span class="cstat-no" title="statement not covered" >            col,</span>
+<span class="cstat-no" title="statement not covered" >            i;</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuPortal = ContextMenuPrimitive.Portal</span>
+<span class="cstat-no" title="statement not covered" >        for (i = 0; i &lt; colNodes.length; i += 1) {</span>
+<span class="cstat-no" title="statement not covered" >            colNode = colNodes[i];</span>
+<span class="cstat-no" title="statement not covered" >            col = {</span>
+<span class="cstat-no" title="statement not covered" >                key: colNode.getAttribute('data-col'),</span>
+<span class="cstat-no" title="statement not covered" >                sortable: !colNode.getAttribute('data-nosort'),</span>
+<span class="cstat-no" title="statement not covered" >                type: colNode.getAttribute('data-type') || 'string'</span>
+<span class="cstat-no" title="statement not covered" >            };</span>
+<span class="cstat-no" title="statement not covered" >            cols.push(col);</span>
+<span class="cstat-no" title="statement not covered" >            if (col.sortable) {</span>
+<span class="cstat-no" title="statement not covered" >                col.defaultDescSort = col.type === 'number';</span>
+<span class="cstat-no" title="statement not covered" >                colNode.innerHTML =</span>
+<span class="cstat-no" title="statement not covered" >                    colNode.innerHTML + '&lt;span class="sorter"&gt;&lt;/span&gt;';</span>
+<span class="cstat-no" title="statement not covered" >            }</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >        return cols;</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    // attaches a data attribute to every tr element with an object</span>
+<span class="cstat-no" title="statement not covered" >    // of data values keyed by column name</span>
+<span class="cstat-no" title="statement not covered" >    function loadRowData(tableRow) {</span>
+<span class="cstat-no" title="statement not covered" >        var tableCols = tableRow.querySelectorAll('td'),</span>
+<span class="cstat-no" title="statement not covered" >            colNode,</span>
+<span class="cstat-no" title="statement not covered" >            col,</span>
+<span class="cstat-no" title="statement not covered" >            data = {},</span>
+<span class="cstat-no" title="statement not covered" >            i,</span>
+<span class="cstat-no" title="statement not covered" >            val;</span>
+<span class="cstat-no" title="statement not covered" >        for (i = 0; i &lt; tableCols.length; i += 1) {</span>
+<span class="cstat-no" title="statement not covered" >            colNode = tableCols[i];</span>
+<span class="cstat-no" title="statement not covered" >            col = cols[i];</span>
+<span class="cstat-no" title="statement not covered" >            val = colNode.getAttribute('data-value');</span>
+<span class="cstat-no" title="statement not covered" >            if (col.type === 'number') {</span>
+<span class="cstat-no" title="statement not covered" >                val = Number(val);</span>
+<span class="cstat-no" title="statement not covered" >            }</span>
+<span class="cstat-no" title="statement not covered" >            data[col.key] = val;</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >        return data;</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    // loads all row data</span>
+<span class="cstat-no" title="statement not covered" >    function loadData() {</span>
+<span class="cstat-no" title="statement not covered" >        var rows = getTableBody().querySelectorAll('tr'),</span>
+<span class="cstat-no" title="statement not covered" >            i;</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuSub = ContextMenuPrimitive.Sub</span>
+<span class="cstat-no" title="statement not covered" >        for (i = 0; i &lt; rows.length; i += 1) {</span>
+<span class="cstat-no" title="statement not covered" >            rows[i].data = loadRowData(rows[i]);</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    // sorts the table using the data for the ith column</span>
+<span class="cstat-no" title="statement not covered" >    function sortByIndex(index, desc) {</span>
+<span class="cstat-no" title="statement not covered" >        var key = cols[index].key,</span>
+<span class="cstat-no" title="statement not covered" >            sorter = function(a, b) {</span>
+<span class="cstat-no" title="statement not covered" >                a = a.data[key];</span>
+<span class="cstat-no" title="statement not covered" >                b = b.data[key];</span>
+<span class="cstat-no" title="statement not covered" >                return a &lt; b ? -1 : a &gt; b ? 1 : 0;</span>
+<span class="cstat-no" title="statement not covered" >            },</span>
+<span class="cstat-no" title="statement not covered" >            finalSorter = sorter,</span>
+<span class="cstat-no" title="statement not covered" >            tableBody = document.querySelector('.coverage-summary tbody'),</span>
+<span class="cstat-no" title="statement not covered" >            rowNodes = tableBody.querySelectorAll('tr'),</span>
+<span class="cstat-no" title="statement not covered" >            rows = [],</span>
+<span class="cstat-no" title="statement not covered" >            i;</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuRadioGroup = ContextMenuPrimitive.RadioGroup</span>
+<span class="cstat-no" title="statement not covered" >        if (desc) {</span>
+<span class="cstat-no" title="statement not covered" >            finalSorter = function(a, b) {</span>
+<span class="cstat-no" title="statement not covered" >                return -1 * sorter(a, b);</span>
+<span class="cstat-no" title="statement not covered" >            };</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuSubTrigger = React.forwardRef&lt;</span>
-<span class="cstat-no" title="statement not covered" >  React.ElementRef&lt;typeof ContextMenuPrimitive.SubTrigger&gt;,</span>
-<span class="cstat-no" title="statement not covered" >  React.ComponentPropsWithoutRef&lt;typeof ContextMenuPrimitive.SubTrigger&gt; &amp; {</span>
-<span class="cstat-no" title="statement not covered" >    inset?: boolean</span>
-<span class="cstat-no" title="statement not covered" >  }</span>
-<span class="cstat-no" title="statement not covered" >&gt;(({ className, inset, children, ...props }, ref) =&gt; (</span>
-<span class="cstat-no" title="statement not covered" >  &lt;ContextMenuPrimitive.SubTrigger</span>
-<span class="cstat-no" title="statement not covered" >    ref={ref}</span>
-<span class="cstat-no" title="statement not covered" >    className={cn(</span>
-<span class="cstat-no" title="statement not covered" >      "flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground",</span>
-<span class="cstat-no" title="statement not covered" >      inset &amp;&amp; "pl-8",</span>
-<span class="cstat-no" title="statement not covered" >      className</span>
-<span class="cstat-no" title="statement not covered" >    )}</span>
-<span class="cstat-no" title="statement not covered" >    {...props}</span>
-<span class="cstat-no" title="statement not covered" >  &gt;</span>
-<span class="cstat-no" title="statement not covered" >    {children}</span>
-<span class="cstat-no" title="statement not covered" >    &lt;ChevronRight className="ml-auto h-4 w-4" /&gt;</span>
-<span class="cstat-no" title="statement not covered" >  &lt;/ContextMenuPrimitive.SubTrigger&gt;</span>
-<span class="cstat-no" title="statement not covered" >))</span>
-<span class="cstat-no" title="statement not covered" >ContextMenuSubTrigger.displayName = ContextMenuPrimitive.SubTrigger.displayName</span>
+<span class="cstat-no" title="statement not covered" >        for (i = 0; i &lt; rowNodes.length; i += 1) {</span>
+<span class="cstat-no" title="statement not covered" >            rows.push(rowNodes[i]);</span>
+<span class="cstat-no" title="statement not covered" >            tableBody.removeChild(rowNodes[i]);</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuSubContent = React.forwardRef&lt;</span>
-<span class="cstat-no" title="statement not covered" >  React.ElementRef&lt;typeof ContextMenuPrimitive.SubContent&gt;,</span>
-<span class="cstat-no" title="statement not covered" >  React.ComponentPropsWithoutRef&lt;typeof ContextMenuPrimitive.SubContent&gt;</span>
-<span class="cstat-no" title="statement not covered" >&gt;(({ className, ...props }, ref) =&gt; (</span>
-<span class="cstat-no" title="statement not covered" >  &lt;ContextMenuPrimitive.SubContent</span>
-<span class="cstat-no" title="statement not covered" >    ref={ref}</span>
-<span class="cstat-no" title="statement not covered" >    className={cn(</span>
-<span class="cstat-no" title="statement not covered" >      "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",</span>
-<span class="cstat-no" title="statement not covered" >      className</span>
-<span class="cstat-no" title="statement not covered" >    )}</span>
-<span class="cstat-no" title="statement not covered" >    {...props}</span>
-<span class="cstat-no" title="statement not covered" >  /&gt;</span>
-<span class="cstat-no" title="statement not covered" >))</span>
-<span class="cstat-no" title="statement not covered" >ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName</span>
+<span class="cstat-no" title="statement not covered" >        rows.sort(finalSorter);</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuContent = React.forwardRef&lt;</span>
-<span class="cstat-no" title="statement not covered" >  React.ElementRef&lt;typeof ContextMenuPrimitive.Content&gt;,</span>
-<span class="cstat-no" title="statement not covered" >  React.ComponentPropsWithoutRef&lt;typeof ContextMenuPrimitive.Content&gt;</span>
-<span class="cstat-no" title="statement not covered" >&gt;(({ className, ...props }, ref) =&gt; (</span>
-<span class="cstat-no" title="statement not covered" >  &lt;ContextMenuPrimitive.Portal&gt;</span>
-<span class="cstat-no" title="statement not covered" >    &lt;ContextMenuPrimitive.Content</span>
-<span class="cstat-no" title="statement not covered" >      ref={ref}</span>
-<span class="cstat-no" title="statement not covered" >      className={cn(</span>
-<span class="cstat-no" title="statement not covered" >        "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",</span>
-<span class="cstat-no" title="statement not covered" >        className</span>
-<span class="cstat-no" title="statement not covered" >      )}</span>
-<span class="cstat-no" title="statement not covered" >      {...props}</span>
-<span class="cstat-no" title="statement not covered" >    /&gt;</span>
-<span class="cstat-no" title="statement not covered" >  &lt;/ContextMenuPrimitive.Portal&gt;</span>
-<span class="cstat-no" title="statement not covered" >))</span>
-<span class="cstat-no" title="statement not covered" >ContextMenuContent.displayName = ContextMenuPrimitive.Content.displayName</span>
+<span class="cstat-no" title="statement not covered" >        for (i = 0; i &lt; rows.length; i += 1) {</span>
+<span class="cstat-no" title="statement not covered" >            tableBody.appendChild(rows[i]);</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    // removes sort indicators for current column being sorted</span>
+<span class="cstat-no" title="statement not covered" >    function removeSortIndicators() {</span>
+<span class="cstat-no" title="statement not covered" >        var col = getNthColumn(currentSort.index),</span>
+<span class="cstat-no" title="statement not covered" >            cls = col.className;</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuItem = React.forwardRef&lt;</span>
-<span class="cstat-no" title="statement not covered" >  React.ElementRef&lt;typeof ContextMenuPrimitive.Item&gt;,</span>
-<span class="cstat-no" title="statement not covered" >  React.ComponentPropsWithoutRef&lt;typeof ContextMenuPrimitive.Item&gt; &amp; {</span>
-<span class="cstat-no" title="statement not covered" >    inset?: boolean</span>
-<span class="cstat-no" title="statement not covered" >  }</span>
-<span class="cstat-no" title="statement not covered" >&gt;(({ className, inset, ...props }, ref) =&gt; (</span>
-<span class="cstat-no" title="statement not covered" >  &lt;ContextMenuPrimitive.Item</span>
-<span class="cstat-no" title="statement not covered" >    ref={ref}</span>
-<span class="cstat-no" title="statement not covered" >    className={cn(</span>
-<span class="cstat-no" title="statement not covered" >      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",</span>
-<span class="cstat-no" title="statement not covered" >      inset &amp;&amp; "pl-8",</span>
-<span class="cstat-no" title="statement not covered" >      className</span>
-<span class="cstat-no" title="statement not covered" >    )}</span>
-<span class="cstat-no" title="statement not covered" >    {...props}</span>
-<span class="cstat-no" title="statement not covered" >  /&gt;</span>
-<span class="cstat-no" title="statement not covered" >))</span>
-<span class="cstat-no" title="statement not covered" >ContextMenuItem.displayName = ContextMenuPrimitive.Item.displayName</span>
+<span class="cstat-no" title="statement not covered" >        cls = cls.replace(/ sorted$/, '').replace(/ sorted-desc$/, '');</span>
+<span class="cstat-no" title="statement not covered" >        col.className = cls;</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    // adds sort indicators for current column being sorted</span>
+<span class="cstat-no" title="statement not covered" >    function addSortIndicators() {</span>
+<span class="cstat-no" title="statement not covered" >        getNthColumn(currentSort.index).className += currentSort.desc</span>
+<span class="cstat-no" title="statement not covered" >            ? ' sorted-desc'</span>
+<span class="cstat-no" title="statement not covered" >            : ' sorted';</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    // adds event listeners for all sorter widgets</span>
+<span class="cstat-no" title="statement not covered" >    function enableUI() {</span>
+<span class="cstat-no" title="statement not covered" >        var i,</span>
+<span class="cstat-no" title="statement not covered" >            el,</span>
+<span class="cstat-no" title="statement not covered" >            ithSorter = function ithSorter(i) {</span>
+<span class="cstat-no" title="statement not covered" >                var col = cols[i];</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuCheckboxItem = React.forwardRef&lt;</span>
-<span class="cstat-no" title="statement not covered" >  React.ElementRef&lt;typeof ContextMenuPrimitive.CheckboxItem&gt;,</span>
-<span class="cstat-no" title="statement not covered" >  React.ComponentPropsWithoutRef&lt;typeof ContextMenuPrimitive.CheckboxItem&gt;</span>
-<span class="cstat-no" title="statement not covered" >&gt;(({ className, children, checked, ...props }, ref) =&gt; (</span>
-<span class="cstat-no" title="statement not covered" >  &lt;ContextMenuPrimitive.CheckboxItem</span>
-<span class="cstat-no" title="statement not covered" >    ref={ref}</span>
-<span class="cstat-no" title="statement not covered" >    className={cn(</span>
-<span class="cstat-no" title="statement not covered" >      "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",</span>
-<span class="cstat-no" title="statement not covered" >      className</span>
-<span class="cstat-no" title="statement not covered" >    )}</span>
-<span class="cstat-no" title="statement not covered" >    checked={checked}</span>
-<span class="cstat-no" title="statement not covered" >    {...props}</span>
-<span class="cstat-no" title="statement not covered" >  &gt;</span>
-<span class="cstat-no" title="statement not covered" >    &lt;span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center"&gt;</span>
-<span class="cstat-no" title="statement not covered" >      &lt;ContextMenuPrimitive.ItemIndicator&gt;</span>
-<span class="cstat-no" title="statement not covered" >        &lt;Check className="h-4 w-4" /&gt;</span>
-<span class="cstat-no" title="statement not covered" >      &lt;/ContextMenuPrimitive.ItemIndicator&gt;</span>
-<span class="cstat-no" title="statement not covered" >    &lt;/span&gt;</span>
-<span class="cstat-no" title="statement not covered" >    {children}</span>
-<span class="cstat-no" title="statement not covered" >  &lt;/ContextMenuPrimitive.CheckboxItem&gt;</span>
-<span class="cstat-no" title="statement not covered" >))</span>
-<span class="cstat-no" title="statement not covered" >ContextMenuCheckboxItem.displayName =</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuPrimitive.CheckboxItem.displayName</span>
+<span class="cstat-no" title="statement not covered" >                return function() {</span>
+<span class="cstat-no" title="statement not covered" >                    var desc = col.defaultDescSort;</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuRadioItem = React.forwardRef&lt;</span>
-<span class="cstat-no" title="statement not covered" >  React.ElementRef&lt;typeof ContextMenuPrimitive.RadioItem&gt;,</span>
-<span class="cstat-no" title="statement not covered" >  React.ComponentPropsWithoutRef&lt;typeof ContextMenuPrimitive.RadioItem&gt;</span>
-<span class="cstat-no" title="statement not covered" >&gt;(({ className, children, ...props }, ref) =&gt; (</span>
-<span class="cstat-no" title="statement not covered" >  &lt;ContextMenuPrimitive.RadioItem</span>
-<span class="cstat-no" title="statement not covered" >    ref={ref}</span>
-<span class="cstat-no" title="statement not covered" >    className={cn(</span>
-<span class="cstat-no" title="statement not covered" >      "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",</span>
-<span class="cstat-no" title="statement not covered" >      className</span>
-<span class="cstat-no" title="statement not covered" >    )}</span>
-<span class="cstat-no" title="statement not covered" >    {...props}</span>
-<span class="cstat-no" title="statement not covered" >  &gt;</span>
-<span class="cstat-no" title="statement not covered" >    &lt;span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center"&gt;</span>
-<span class="cstat-no" title="statement not covered" >      &lt;ContextMenuPrimitive.ItemIndicator&gt;</span>
-<span class="cstat-no" title="statement not covered" >        &lt;Circle className="h-2 w-2 fill-current" /&gt;</span>
-<span class="cstat-no" title="statement not covered" >      &lt;/ContextMenuPrimitive.ItemIndicator&gt;</span>
-<span class="cstat-no" title="statement not covered" >    &lt;/span&gt;</span>
-<span class="cstat-no" title="statement not covered" >    {children}</span>
-<span class="cstat-no" title="statement not covered" >  &lt;/ContextMenuPrimitive.RadioItem&gt;</span>
-<span class="cstat-no" title="statement not covered" >))</span>
-<span class="cstat-no" title="statement not covered" >ContextMenuRadioItem.displayName = ContextMenuPrimitive.RadioItem.displayName</span>
+<span class="cstat-no" title="statement not covered" >                    if (currentSort.index === i) {</span>
+<span class="cstat-no" title="statement not covered" >                        desc = !currentSort.desc;</span>
+<span class="cstat-no" title="statement not covered" >                    }</span>
+<span class="cstat-no" title="statement not covered" >                    sortByIndex(i, desc);</span>
+<span class="cstat-no" title="statement not covered" >                    removeSortIndicators();</span>
+<span class="cstat-no" title="statement not covered" >                    currentSort.index = i;</span>
+<span class="cstat-no" title="statement not covered" >                    currentSort.desc = desc;</span>
+<span class="cstat-no" title="statement not covered" >                    addSortIndicators();</span>
+<span class="cstat-no" title="statement not covered" >                };</span>
+<span class="cstat-no" title="statement not covered" >            };</span>
+<span class="cstat-no" title="statement not covered" >        for (i = 0; i &lt; cols.length; i += 1) {</span>
+<span class="cstat-no" title="statement not covered" >            if (cols[i].sortable) {</span>
+<span class="cstat-no" title="statement not covered" >                // add the click event handler on the th so users</span>
+<span class="cstat-no" title="statement not covered" >                // dont have to click on those tiny arrows</span>
+<span class="cstat-no" title="statement not covered" >                el = getNthColumn(i).querySelector('.sorter').parentElement;</span>
+<span class="cstat-no" title="statement not covered" >                if (el.addEventListener) {</span>
+<span class="cstat-no" title="statement not covered" >                    el.addEventListener('click', ithSorter(i));</span>
+<span class="cstat-no" title="statement not covered" >                } else {</span>
+<span class="cstat-no" title="statement not covered" >                    el.attachEvent('onclick', ithSorter(i));</span>
+<span class="cstat-no" title="statement not covered" >                }</span>
+<span class="cstat-no" title="statement not covered" >            }</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    // adds sorting functionality to the UI</span>
+<span class="cstat-no" title="statement not covered" >    return function() {</span>
+<span class="cstat-no" title="statement not covered" >        if (!getTable()) {</span>
+<span class="cstat-no" title="statement not covered" >            return;</span>
+<span class="cstat-no" title="statement not covered" >        }</span>
+<span class="cstat-no" title="statement not covered" >        cols = loadColumns();</span>
+<span class="cstat-no" title="statement not covered" >        loadData();</span>
+<span class="cstat-no" title="statement not covered" >        addSearchBox();</span>
+<span class="cstat-no" title="statement not covered" >        addSortIndicators();</span>
+<span class="cstat-no" title="statement not covered" >        enableUI();</span>
+<span class="cstat-no" title="statement not covered" >    };</span>
+<span class="cstat-no" title="statement not covered" >})();</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuLabel = React.forwardRef&lt;</span>
-<span class="cstat-no" title="statement not covered" >  React.ElementRef&lt;typeof ContextMenuPrimitive.Label&gt;,</span>
-<span class="cstat-no" title="statement not covered" >  React.ComponentPropsWithoutRef&lt;typeof ContextMenuPrimitive.Label&gt; &amp; {</span>
-<span class="cstat-no" title="statement not covered" >    inset?: boolean</span>
-<span class="cstat-no" title="statement not covered" >  }</span>
-<span class="cstat-no" title="statement not covered" >&gt;(({ className, inset, ...props }, ref) =&gt; (</span>
-<span class="cstat-no" title="statement not covered" >  &lt;ContextMenuPrimitive.Label</span>
-<span class="cstat-no" title="statement not covered" >    ref={ref}</span>
-<span class="cstat-no" title="statement not covered" >    className={cn(</span>
-<span class="cstat-no" title="statement not covered" >      "px-2 py-1.5 text-sm font-semibold text-foreground",</span>
-<span class="cstat-no" title="statement not covered" >      inset &amp;&amp; "pl-8",</span>
-<span class="cstat-no" title="statement not covered" >      className</span>
-<span class="cstat-no" title="statement not covered" >    )}</span>
-<span class="cstat-no" title="statement not covered" >    {...props}</span>
-<span class="cstat-no" title="statement not covered" >  /&gt;</span>
-<span class="cstat-no" title="statement not covered" >))</span>
-<span class="cstat-no" title="statement not covered" >ContextMenuLabel.displayName = ContextMenuPrimitive.Label.displayName</span>
-<span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuSeparator = React.forwardRef&lt;</span>
-<span class="cstat-no" title="statement not covered" >  React.ElementRef&lt;typeof ContextMenuPrimitive.Separator&gt;,</span>
-<span class="cstat-no" title="statement not covered" >  React.ComponentPropsWithoutRef&lt;typeof ContextMenuPrimitive.Separator&gt;</span>
-<span class="cstat-no" title="statement not covered" >&gt;(({ className, ...props }, ref) =&gt; (</span>
-<span class="cstat-no" title="statement not covered" >  &lt;ContextMenuPrimitive.Separator</span>
-<span class="cstat-no" title="statement not covered" >    ref={ref}</span>
-<span class="cstat-no" title="statement not covered" >    className={cn("-mx-1 my-1 h-px bg-border", className)}</span>
-<span class="cstat-no" title="statement not covered" >    {...props}</span>
-<span class="cstat-no" title="statement not covered" >  /&gt;</span>
-<span class="cstat-no" title="statement not covered" >))</span>
-<span class="cstat-no" title="statement not covered" >ContextMenuSeparator.displayName = ContextMenuPrimitive.Separator.displayName</span>
-<span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >const ContextMenuShortcut = ({</span>
-<span class="cstat-no" title="statement not covered" >  className,</span>
-<span class="cstat-no" title="statement not covered" >  ...props</span>
-<span class="cstat-no" title="statement not covered" >}: React.HTMLAttributes&lt;HTMLSpanElement&gt;) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >  return (</span>
-<span class="cstat-no" title="statement not covered" >    &lt;span</span>
-<span class="cstat-no" title="statement not covered" >      className={cn(</span>
-<span class="cstat-no" title="statement not covered" >        "ml-auto text-xs tracking-widest text-muted-foreground",</span>
-<span class="cstat-no" title="statement not covered" >        className</span>
-<span class="cstat-no" title="statement not covered" >      )}</span>
-<span class="cstat-no" title="statement not covered" >      {...props}</span>
-<span class="cstat-no" title="statement not covered" >    /&gt;</span>
-<span class="cstat-no" title="statement not covered" >  )</span>
-<span class="cstat-no" title="statement not covered" >}</span>
-<span class="cstat-no" title="statement not covered" >ContextMenuShortcut.displayName = "ContextMenuShortcut"</span>
-<span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >export {</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenu,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuTrigger,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuContent,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuItem,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuCheckboxItem,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuRadioItem,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuLabel,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuSeparator,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuShortcut,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuGroup,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuPortal,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuSub,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuSubContent,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuSubTrigger,</span>
-<span class="cstat-no" title="statement not covered" >  ContextMenuRadioGroup,</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" >window.addEventListener('load', addSorting);</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -666,14 +660,14 @@
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
                 at 2025-03-27T11:16:34.248Z
             </div>
-        <script src="../../../../../prettify.js"></script>
+        <script src="../../../prettify.js"></script>
         <script>
             window.onload = function () {
                 prettyPrint();
             };
         </script>
-        <script src="../../../../../sorter.js"></script>
-        <script src="../../../../../block-navigation.js"></script>
+        <script src="../../../sorter.js"></script>
+        <script src="../../../block-navigation.js"></script>
     </body>
 </html>
     

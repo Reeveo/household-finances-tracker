@@ -293,20 +293,29 @@ function createTransactionId(transaction: Partial<BankTransaction>): string {
 // Helper function to create a suggester that returns an object with category, subcategory, and confidence
 function suggestCategoryWithConfidence(description: string, amount: number) {
   try {
-    const category = suggestCategory(description);
+    // Get the suggestion from our categorization engine
+    const suggestion = suggestCategory(description);
     
-    // Ensure we have a valid category by checking against SUB_CATEGORIES
-    const validCategory = SUB_CATEGORIES[category] ? category : "Essentials";
+    // Extract the category string from the suggestion
+    const suggestedCategory = suggestion.category;
     
-    // Get first subcategory if available, or empty string
-    const subcategory = SUB_CATEGORIES[validCategory]?.length > 0 
-      ? SUB_CATEGORIES[validCategory][0] 
-      : '';
-      
-    const confidence = calculateConfidenceScore(description, validCategory, subcategory);
+    // Validate the category against our known categories
+    const validCategory = SUB_CATEGORIES[suggestedCategory] ? suggestedCategory : "Essentials";
+    
+    // Get subcategories for the valid category
+    const availableSubcategories = SUB_CATEGORIES[validCategory] || [];
+    
+    // Use suggested subcategory if valid, otherwise use first available subcategory
+    const validSubcategory = suggestion.subcategory && availableSubcategories.includes(suggestion.subcategory)
+      ? suggestion.subcategory
+      : (availableSubcategories.length > 0 ? availableSubcategories[0] : '');
+    
+    // Calculate confidence score for the final categorization
+    const confidence = calculateConfidenceScore(description, validCategory, validSubcategory);
+    
     return { 
       category: validCategory, 
-      subcategory, 
+      subcategory: validSubcategory, 
       confidence 
     };
   } catch (err) {
@@ -437,7 +446,10 @@ export function CSVImport() {
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        const lines = text.split('\n').filter(line => line.trim());
+        // Filter out empty lines and whitespace-only lines
+        const lines = text.split('\n')
+          .map(line => line.trim())
+          .filter(line => line && line.length > 0);
         setRawCsvLines(lines);
         
         if (lines.length === 0) {
@@ -501,10 +513,14 @@ export function CSVImport() {
       
       for (let i = startIndex; i < rawCsvLines.length; i++) {
         const line = rawCsvLines[i].trim();
-        if (!line) continue;
+        if (!line) continue; // Skip empty lines
         
-        // Split line by delimiter, handle quoted fields
-        const values = line.split(delimiter);
+        // Split line by delimiter and trim each value
+        const values = line.split(delimiter).map(val => val.trim());
+        
+        // Skip lines that are effectively empty (all values are empty strings)
+        if (values.every(val => !val)) continue;
+        
         console.log(`Line ${i} values:`, values);
         
         try {
@@ -559,22 +575,15 @@ export function CSVImport() {
           console.log(`Line ${i} normalized date:`, normalizedDate);
           
           // Auto-categorize based on transaction description using our advanced categorization engine
-          let suggestedCategory = "Essentials"; // Default fallback category
+          const categorySuggestion = suggestCategoryWithConfidence(description, amount);
+          console.log('Suggested category:', categorySuggestion);
           
-          try {
-            suggestedCategory = suggestCategory(description);
-            console.log(`Got suggested category: ${suggestedCategory} for "${description}"`);
-          } catch (error) {
-            console.error("Error suggesting category:", error);
-          }
+          // Get the category and subcategory from the suggestion
+          const suggestedCategory = categorySuggestion.category;
+          const suggestedSubcategory = categorySuggestion.subcategory;
           
-          // Get suggested subcategory for this category
-          const subcategories = SUB_CATEGORIES[suggestedCategory] || [];
-          const suggestedSubcategory = subcategories.length > 0 ? subcategories[0] : '';
-          console.log(`Selected subcategory: ${suggestedSubcategory} from options:`, subcategories);
-          
-          console.log(`Line ${i} category:`, suggestedCategory);
-          console.log(`Line ${i} subcategory:`, suggestedSubcategory);
+          console.log('Using category:', suggestedCategory);
+          console.log('Using subcategory:', suggestedSubcategory);
           
           // Extract month from transaction date for budget month
           let budgetMonthValue = 'current'; // Fallback value
