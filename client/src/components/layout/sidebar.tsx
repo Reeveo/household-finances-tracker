@@ -1,207 +1,178 @@
-import { useAuth } from "@/hooks/use-auth";
-import { Link, useLocation } from "wouter";
-import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
-import {
-  LayoutDashboard,
-  CreditCard,
-  TrendingUp,
-  Home,
-  FileText,
-  Clock,
-  Settings,
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  CreditCard, 
+  PiggyBank, 
+  BarChart, 
+  Calculator, 
+  Settings, 
   LogOut,
-  Menu,
-  PoundSterling,
-  X,
-  BarChart
-} from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+  ChevronDown,
+  ChevronRight,
+  Home,
+  TrendingUp,
+  Wallet,
+  Landmark
+} from 'lucide-react';
 
-type SidebarProps = {
-  className?: string;
-};
-
-export function Sidebar({ className }: SidebarProps) {
-  const [location] = useLocation();
-  const { logoutMutation } = useAuth();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isMobile = useIsMobile();
+export function Sidebar() {
+  const location = useLocation();
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(['calculators']);
   
-  // Close sidebar when navigating to a new route on mobile
-  useEffect(() => {
-    if (isMobile) {
-      setMobileMenuOpen(false);
-    }
-  }, [location, isMobile]);
-  
-  // Close sidebar when pressing escape key
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setMobileMenuOpen(false);
-      }
-    };
-    
-    window.addEventListener('keydown', handleEsc);
-    return () => {
-      window.removeEventListener('keydown', handleEsc);
-    };
-  }, []);
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
 
-  const navItems = [
-    {
-      title: "Overview",
-      items: [
-        {
-          title: "Dashboard",
-          icon: <LayoutDashboard className="w-5 h-5 mr-3" />,
-          href: "/",
-        },
-        {
-          title: "Income & Expenses",
-          icon: <CreditCard className="w-5 h-5 mr-3" />,
-          href: "/income-expenses",
-        },
-        {
-          title: "Savings & Investments",
-          icon: <TrendingUp className="w-5 h-5 mr-3" />,
-          href: "/savings-investments",
-        },
-        {
-          title: "Transaction Analytics",
-          icon: <BarChart className="w-5 h-5 mr-3" />,
-          href: "/transaction-analytics",
-        },
-      ],
+  const isSubmenuActive = (paths: string[]) => {
+    return paths.some(path => location.pathname.startsWith(path));
+  };
+  
+  const toggleMenu = (menu: string) => {
+    setExpandedMenus(prev => 
+      prev.includes(menu) 
+        ? prev.filter(item => item !== menu)
+        : [...prev, menu]
+    );
+  };
+  
+  const mainNavItems = [
+    { 
+      name: 'Dashboard', 
+      path: '/dashboard', 
+      icon: <LayoutDashboard className="h-5 w-5" /> 
     },
-    {
-      title: "Calculators",
-      items: [
-        {
-          title: "Salary Calculator",
-          icon: <PoundSterling className="w-5 h-5 mr-3" />,
-          href: "/salary-calculator",
-        },
-        {
-          title: "Mortgage Calculator",
-          icon: <Home className="w-5 h-5 mr-3" />,
-          href: "/mortgage-calculator",
-        },
-        {
-          title: "Mortgage Overpayment",
-          icon: <FileText className="w-5 h-5 mr-3" />,
-          href: "/mortgage-overpayment",
-        },
-        {
-          title: "Pension Calculator",
-          icon: <Clock className="w-5 h-5 mr-3" />,
-          href: "/pension-calculator",
-        },
-      ],
+    { 
+      name: 'Transactions', 
+      path: '/transactions', 
+      icon: <CreditCard className="h-5 w-5" /> 
     },
-    {
-      title: "Account",
-      items: [
-        {
-          title: "Settings",
-          icon: <Settings className="w-5 h-5 mr-3" />,
-          href: "/settings",
-        },
-        {
-          title: "Logout",
-          icon: <LogOut className="w-5 h-5 mr-3" />,
-          href: "#",
-          onClick: () => logoutMutation.mutate(),
-        },
-      ],
+    { 
+      name: 'Savings', 
+      path: '/savings', 
+      icon: <PiggyBank className="h-5 w-5" /> 
+    },
+    { 
+      name: 'Analytics', 
+      path: '/analytics', 
+      icon: <BarChart className="h-5 w-5" /> 
     },
   ];
 
+  const calculatorItems = [
+    {
+      name: 'Mortgage Calculator',
+      path: '/calculators/mortgage',
+      icon: <Home className="h-4 w-4" />
+    },
+    {
+      name: 'Mortgage Overpayment',
+      path: '/calculators/mortgage-overpayment',
+      icon: <TrendingUp className="h-4 w-4" />
+    },
+    {
+      name: 'Pension Calculator',
+      path: '/calculators/pension',
+      icon: <Wallet className="h-4 w-4" />
+    },
+    {
+      name: 'Salary Calculator',
+      path: '/calculators/salary',
+      icon: <Landmark className="h-4 w-4" />
+    }
+  ];
+
+  const isCalculatorsExpanded = expandedMenus.includes('calculators');
+  const isCalculatorsActive = isSubmenuActive(['/calculators']);
+
   return (
-    <>
-      {/* Mobile navbar/header - fixed at top */}
-      <div className="lg:hidden flex items-center justify-between p-3 bg-primary text-primary-foreground fixed top-0 left-0 right-0 z-20 shadow-md">
-        <div className="flex items-center space-x-2">
-          <PoundSterling className="w-5 h-5" />
-          <span className="font-semibold text-base">Finance Tracker</span>
-        </div>
-        <button 
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-1.5 rounded-md hover:bg-primary-foreground/10"
-          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-        >
-          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+    <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 min-h-screen">
+      <div className="p-4 border-b border-gray-200">
+        <h2 className="text-xl font-bold text-indigo-600">Finance Tracker</h2>
       </div>
+      
+      <nav className="flex-1 p-4 space-y-1">
+        {/* Main navigation items */}
+        {mainNavItems.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className={`flex items-center px-3 py-2 rounded-md transition-colors ${
+              isActive(item.path)
+                ? 'bg-indigo-50 text-indigo-600'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            {item.icon}
+            <span className="ml-3">{item.name}</span>
+          </Link>
+        ))}
 
-      {/* Spacer for mobile to prevent content from being hidden under navbar */}
-      <div className="h-12 lg:hidden"></div>
-
-      {/* Sidebar */}
-      <aside 
-        className={cn(
-          "w-64 lg:w-56 h-[calc(100vh-48px)] lg:h-screen bg-primary text-primary-foreground flex-shrink-0 fixed lg:sticky top-12 lg:top-0 z-30 transition-all duration-300 transform overflow-hidden",
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-          className
-        )}
-      >
-        {/* Desktop logo */}
-        <div className="p-3 hidden lg:flex items-center border-b border-primary-foreground/10">
-          <PoundSterling className="w-5 h-5 mr-2" />
-          <span className="font-bold text-base">Finance Tracker</span>
+        {/* Calculators with submenu */}
+        <div className="space-y-1">
+          <button
+            onClick={() => toggleMenu('calculators')}
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-md transition-colors ${
+              isCalculatorsActive
+                ? 'bg-indigo-50 text-indigo-600'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <div className="flex items-center">
+              <Calculator className="h-5 w-5" />
+              <span className="ml-3">Calculators</span>
+            </div>
+            {isCalculatorsExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+          
+          {/* Calculator submenu */}
+          {isCalculatorsExpanded && (
+            <div className="pl-9 space-y-1 mt-1">
+              {calculatorItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${
+                    isActive(item.path)
+                      ? 'bg-indigo-50 text-indigo-600'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {item.icon}
+                  <span className="ml-2">{item.name}</span>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
-        
-        <nav className="h-full overflow-y-auto pb-20">
-          <ul className="p-2 w-full">
-            {navItems.map((section, idx) => (
-              <li key={idx} className="mb-3">
-                <div className="px-3 py-1.5 text-xs uppercase text-primary-foreground/60 font-semibold tracking-wider">
-                  {section.title}
-                </div>
-                <ul>
-                  {section.items.map((item, itemIdx) => (
-                    <li key={itemIdx} className="mb-1">
-                      {item.onClick ? (
-                        <button
-                          onClick={item.onClick}
-                          className={cn(
-                            "flex items-center px-3 py-1.5 w-full text-left text-sm text-primary-foreground hover:bg-white/10 rounded-md",
-                            location === item.href && "bg-white/10 font-medium"
-                          )}
-                        >
-                          {item.icon}
-                          {item.title}
-                        </button>
-                      ) : (
-                        <Link 
-                          href={item.href}
-                          className={cn(
-                            "flex items-center px-3 py-1.5 text-sm text-primary-foreground hover:bg-white/10 rounded-md",
-                            location === item.href && "bg-white/10 font-medium"
-                          )}
-                          onClick={() => setMobileMenuOpen(false)}
-                        >
-                          {item.icon}
-                          {item.title}
-                        </Link>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </aside>
 
-      {/* Overlay when mobile menu is open */}
-      {mobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-    </>
+        {/* Settings */}
+        <Link
+          to="/settings"
+          className={`flex items-center px-3 py-2 rounded-md transition-colors ${
+            isActive('/settings')
+              ? 'bg-indigo-50 text-indigo-600'
+              : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          <Settings className="h-5 w-5" />
+          <span className="ml-3">Settings</span>
+        </Link>
+      </nav>
+      
+      <div className="p-4 border-t border-gray-200">
+        <Link
+          to="/"
+          className="flex items-center px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="ml-3">Logout</span>
+        </Link>
+      </div>
+    </aside>
   );
 }

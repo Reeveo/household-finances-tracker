@@ -1248,7 +1248,7 @@ export function TransactionManagement() {
                                 {freq}
                               </SelectItem>
                             )
-                          ))}
+                          )}
                         </SelectContent>
                       </Select>
                       <FormMessage />

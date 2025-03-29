@@ -1,104 +1,60 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { useState } from "react";
-
-// Sample data
-const savingsData = {
-  "6 Months": [
-    { month: 'Jan', Savings: 8500, Investments: 15200 },
-    { month: 'Feb', Savings: 9200, Investments: 16800 },
-    { month: 'Mar', Savings: 9850, Investments: 18500 },
-    { month: 'Apr', Savings: 10400, Investments: 20400 },
-    { month: 'May', Savings: 11200, Investments: 22800 },
-    { month: 'Jun', Savings: 12000, Investments: 24500 },
-  ],
-  "1 Year": [
-    { month: 'Jul', Savings: 7500, Investments: 13000 },
-    { month: 'Aug', Savings: 7800, Investments: 13900 },
-    { month: 'Sep', Savings: 8000, Investments: 14300 },
-    { month: 'Oct', Savings: 8200, Investments: 14800 },
-    { month: 'Nov', Savings: 8350, Investments: 15000 },
-    { month: 'Dec', Savings: 8450, Investments: 15100 },
-    { month: 'Jan', Savings: 8500, Investments: 15200 },
-    { month: 'Feb', Savings: 9200, Investments: 16800 },
-    { month: 'Mar', Savings: 9850, Investments: 18500 },
-    { month: 'Apr', Savings: 10400, Investments: 20400 },
-    { month: 'May', Savings: 11200, Investments: 22800 },
-    { month: 'Jun', Savings: 12000, Investments: 24500 },
-  ],
-  "5 Years": [
-    { month: '2019', Savings: 5000, Investments: 8000 },
-    { month: '2020', Savings: 7000, Investments: 12000 },
-    { month: '2021', Savings: 9000, Investments: 16000 },
-    { month: '2022', Savings: 11000, Investments: 20000 },
-    { month: '2023', Savings: 12000, Investments: 24500 },
-  ]
-};
+import React from 'react';
 
 export function SavingsChart() {
-  const [timeRange, setTimeRange] = useState("6 Months");
-  
+  // Mock data for a simple representation
+  const savingsData = {
+    currentSavings: 8500,
+    savingsGoal: 15000,
+    percentComplete: 56.7,
+    monthlySavings: 1300
+  };
+
   return (
-    <Card className="shadow-sm">
-      <CardContent className="p-5">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Savings & Investment Trends</h3>
-          <Select
-            value={timeRange}
-            onValueChange={setTimeRange}
-          >
-            <SelectTrigger className="w-[120px]">
-              <SelectValue placeholder="Select Range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="6 Months">6 Months</SelectItem>
-              <SelectItem value="1 Year">1 Year</SelectItem>
-              <SelectItem value="5 Years">5 Years</SelectItem>
-            </SelectContent>
-          </Select>
+    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+      <h3 className="text-lg font-medium">Savings Goal</h3>
+      <p className="text-sm text-gray-500 mb-4">Track your progress toward financial freedom</p>
+      
+      <div className="space-y-6">
+        {/* Progress bar */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center text-sm">
+            <span>Current: ${savingsData.currentSavings.toLocaleString()}</span>
+            <span>Goal: ${savingsData.savingsGoal.toLocaleString()}</span>
+          </div>
+          <div className="h-4 w-full bg-gray-100 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-indigo-500" 
+              style={{ width: `${savingsData.percentComplete}%` }}
+            ></div>
+          </div>
+          <p className="text-center text-sm font-medium text-indigo-600">
+            {savingsData.percentComplete}% Complete
+          </p>
         </div>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={savingsData[timeRange as keyof typeof savingsData]}
-              margin={{
-                top: 20,
-                right: 30,
-                left: 20,
-                bottom: 5,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis 
-                tickFormatter={(value) => `£${value}`}
-                width={60}
-              />
-              <Tooltip 
-                formatter={(value) => [`£${value}`, ""]}
-                labelFormatter={(label) => `Month: ${label}`}
-              />
-              <Line
-                type="monotone"
-                dataKey="Savings"
-                stroke="#0d9488"
-                strokeWidth={2}
-                dot={{ r: 5 }}
-                activeDot={{ r: 7 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="Investments"
-                stroke="#6366f1"
-                strokeWidth={2}
-                dot={{ r: 5 }}
-                activeDot={{ r: 7 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+        
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-gray-50 p-3 rounded-md">
+            <p className="text-sm text-gray-500">Monthly Savings</p>
+            <p className="text-lg font-bold">${savingsData.monthlySavings}</p>
+            <p className="text-xs text-gray-500">
+              At this rate, you'll reach your goal in {Math.ceil((savingsData.savingsGoal - savingsData.currentSavings) / savingsData.monthlySavings)} months
+            </p>
+          </div>
+          <div className="bg-gray-50 p-3 rounded-md">
+            <p className="text-sm text-gray-500">Potential Growth</p>
+            <p className="text-lg font-bold">$10,625</p>
+            <p className="text-xs text-gray-500">
+              Est. value in 1 year with 5% return
+            </p>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+        
+        {/* Placeholder for chart visualization */}
+        <div className="h-40 w-full flex items-center justify-center border border-gray-100 rounded-md">
+          <p className="text-gray-400 text-sm">Savings growth chart would appear here</p>
+        </div>
+      </div>
+    </div>
   );
 }

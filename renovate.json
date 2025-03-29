@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base"
+  ],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true
+    },
+    {
+      "matchPackagePatterns": ["^@radix-ui/"],
+      "groupName": "radix-ui",
+      "groupSlug": "radix-ui"
+    },
+    {
+      "matchPackagePatterns": ["^@types/"],
+      "groupName": "types",
+      "groupSlug": "types"
+    }
+  ],
+  "schedule": ["every weekend"],
+  "prHourlyLimit": 4,
+  "prConcurrentLimit": 16,
+  "rangeStrategy": "pin",
+  "semanticCommits": true,
+  "labels": ["dependencies"],
+  "assignees": [],
+  "reviewers": [],
+  "stabilityDays": 3,
+  "internalChecksFilter": "strict",
+  "vulnerabilityAlert": {
+    "labels": ["security"],
+    "assignees": [],
+    "reviewers": []
+  }
+} 

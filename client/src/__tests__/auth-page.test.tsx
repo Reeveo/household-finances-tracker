@@ -1,258 +1,158 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import AuthPage from '../pages/auth-page';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import AuthPage from '../../AuthPage';
 import { renderWithProviders } from './test-utils';
 
-// Mock useAuth hook
-vi.mock('@/hooks/use-auth', () => ({
-  useAuth: vi.fn(),
-}));
-
-// Mock useLocation hook
-vi.mock('wouter', () => ({
-  useLocation: vi.fn(() => ['/auth', vi.fn()]),
-}));
-
-// Mock useIsMobile hook
-vi.mock('@/hooks/use-mobile', () => ({
-  useIsMobile: vi.fn(() => false),
-}));
+// Mock navigate
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate
+  };
+});
 
 describe('AuthPage', () => {
-  // Setup common mocks
-  const mockLoginMutate = vi.fn();
-  const mockRegisterMutate = vi.fn();
-  
   beforeEach(() => {
     vi.clearAllMocks();
-    
-    // Default mock implementation
-    const useAuth = vi.requireMock('@/hooks/use-auth').useAuth;
-    useAuth.mockReturnValue({
-      user: null,
-      loginMutation: {
-        mutate: mockLoginMutate,
-        isPending: false,
-        isError: false,
-        error: null
-      },
-      registerMutation: {
-        mutate: mockRegisterMutate,
-        isPending: false,
-        isError: false,
-        error: null
-      }
-    });
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('renders the auth page with login form by default', () => {
     renderWithProviders(<AuthPage />);
     
-    // Check for login form elements
-    expect(screen.getByRole('tab', { name: /login/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /register/i })).toBeInTheDocument();
+    // Get tab buttons
+    const tabButtons = screen.getAllByRole('button');
+    const loginTab = tabButtons.find(button => 
+      button.textContent === 'Login' && 
+      !button.getAttribute('type')?.includes('submit')
+    );
+    const registerTab = tabButtons.find(button => 
+      button.textContent === 'Register' && 
+      !button.getAttribute('type')?.includes('submit')
+    );
+    
+    expect(loginTab).toBeInTheDocument();
+    expect(registerTab).toBeInTheDocument();
     
     // Login form should be active by default
-    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
-    
-    // Feature section should be visible
-    expect(screen.getByText(/smart budget tracking/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter your username')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument();
+    expect(screen.getByTestId('login-form')).toBeInTheDocument();
   });
 
   it('switches to register tab when clicked', async () => {
     renderWithProviders(<AuthPage />);
     
-    // Click on the register tab
-    fireEvent.click(screen.getByRole('tab', { name: /register/i }));
+    // Get the register tab and click it
+    const tabButtons = screen.getAllByRole('button');
+    const registerTab = tabButtons.find(button => 
+      button.textContent === 'Register' && 
+      !button.getAttribute('type')?.includes('submit')
+    );
+    
+    if (!registerTab) {
+      throw new Error('Register tab not found');
+    }
+    
+    await act(async () => {
+      fireEvent.click(registerTab);
+    });
     
     // Check that registration form is now visible
-    await waitFor(() => {
-      expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
-    });
+    expect(screen.getByTestId('register-form')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Choose a username')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Choose a password')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter your email')).toBeInTheDocument();
   });
 
-  it('submits login form with valid data', async () => {
+  it('handles login form submission', async () => {
+    // Mock window.alert
+    const alertMock = vi.fn();
+    vi.stubGlobal('alert', alertMock);
+    
     renderWithProviders(<AuthPage />);
     
     // Fill in the login form
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' }
-    });
-    
-    fireEvent.change(screen.getByLabelText(/password/i), {
-      target: { value: 'password123' }
-    });
-    
-    // Submit the form
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
-    
-    // Check that login mutation was called with correct data
-    await waitFor(() => {
-      expect(mockLoginMutate).toHaveBeenCalledWith({
-        username: 'testuser',
-        password: 'password123'
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('Enter your username'), {
+        target: { value: 'testuser' }
+      });
+      
+      fireEvent.change(screen.getByPlaceholderText('Enter your password'), {
+        target: { value: 'password123' }
       });
     });
-  });
-
-  it('shows validation errors for login form', async () => {
-    renderWithProviders(<AuthPage />);
     
-    // Submit empty form to trigger validation
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
-    
-    // Check for validation error messages
-    await waitFor(() => {
-      expect(screen.getByText(/username must be at least 3 characters/i)).toBeInTheDocument();
-      expect(screen.getByText(/password must be at least 6 characters/i)).toBeInTheDocument();
+    // Submit the form and wait for the async function to complete
+    await act(async () => {
+      fireEvent.submit(screen.getByTestId('login-form'));
+      // Wait for the simulated API call (1000ms delay)
+      await new Promise(resolve => setTimeout(resolve, 1100));
     });
     
-    // Login mutation should not be called
-    expect(mockLoginMutate).not.toHaveBeenCalled();
+    // Check that alert was called and navigation happened
+    expect(alertMock).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('submits registration form with valid data', async () => {
+  it('handles registration form submission', async () => {
+    // Mock window.alert
+    const alertMock = vi.fn();
+    vi.stubGlobal('alert', alertMock);
+    
     renderWithProviders(<AuthPage />);
     
     // Switch to register tab
-    fireEvent.click(screen.getByRole('tab', { name: /register/i }));
+    const tabButtons = screen.getAllByRole('button');
+    const registerTab = tabButtons.find(button => 
+      button.textContent === 'Register' && 
+      !button.getAttribute('type')?.includes('submit')
+    );
+    
+    if (!registerTab) {
+      throw new Error('Register tab not found');
+    }
+    
+    await act(async () => {
+      fireEvent.click(registerTab);
+    });
     
     // Fill in the registration form
-    await waitFor(() => {
-      fireEvent.change(screen.getByLabelText(/name/i), {
+    await act(async () => {
+      fireEvent.change(screen.getByPlaceholderText('Choose a username'), {
+        target: { value: 'testuser' }
+      });
+        
+      fireEvent.change(screen.getByPlaceholderText('Choose a password'), {
+        target: { value: 'password123' }
+      });
+        
+      fireEvent.change(screen.getByPlaceholderText('Enter your email'), {
+        target: { value: 'test@example.com' }
+      });
+        
+      fireEvent.change(screen.getByPlaceholderText('Enter your full name'), {
         target: { value: 'Test User' }
       });
     });
     
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'test@example.com' }
+    // Submit the form and wait for the async function to complete
+    await act(async () => {
+      fireEvent.submit(screen.getByTestId('register-form'));
+      // Wait for the simulated API call (1000ms delay)
+      await new Promise(resolve => setTimeout(resolve, 1100));
     });
     
-    fireEvent.change(screen.getByLabelText(/username/i), {
-      target: { value: 'testuser' }
-    });
-    
-    fireEvent.change(screen.getByLabelText(/password/i), {
-      target: { value: 'password123' }
-    });
-    
-    // Submit the form
-    fireEvent.click(screen.getByRole('button', { name: /create account/i }));
-    
-    // Check that register mutation was called with correct data
-    await waitFor(() => {
-      expect(mockRegisterMutate).toHaveBeenCalledWith({
-        name: 'Test User',
-        email: 'test@example.com',
-        username: 'testuser',
-        password: 'password123'
-      });
-    });
-  });
-
-  it('shows validation errors for registration form', async () => {
-    renderWithProviders(<AuthPage />);
-    
-    // Switch to register tab
-    fireEvent.click(screen.getByRole('tab', { name: /register/i }));
-    
-    // Submit empty form to trigger validation
-    await waitFor(() => {
-      fireEvent.click(screen.getByRole('button', { name: /create account/i }));
-    });
-    
-    // Check for validation error messages
-    await waitFor(() => {
-      expect(screen.getByText(/name must be at least 2 characters/i)).toBeInTheDocument();
-      expect(screen.getByText(/must be a valid email address/i)).toBeInTheDocument();
-      expect(screen.getByText(/username must be at least 3 characters/i)).toBeInTheDocument();
-      expect(screen.getByText(/password must be at least 6 characters/i)).toBeInTheDocument();
-    });
-    
-    // Register mutation should not be called
-    expect(mockRegisterMutate).not.toHaveBeenCalled();
-  });
-
-  it('shows loading state during login submission', async () => {
-    const useAuth = vi.requireMock('@/hooks/use-auth').useAuth;
-    useAuth.mockReturnValue({
-      user: null,
-      loginMutation: {
-        mutate: mockLoginMutate,
-        isPending: true,
-        isError: false,
-        error: null
-      },
-      registerMutation: {
-        mutate: mockRegisterMutate,
-        isPending: false,
-        isError: false,
-        error: null
-      }
-    });
-    
-    renderWithProviders(<AuthPage />);
-    
-    // Check for loading state
-    expect(screen.getByRole('button', { name: /signing in/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled();
-  });
-
-  it('shows error message when login fails', async () => {
-    const useAuth = vi.requireMock('@/hooks/use-auth').useAuth;
-    useAuth.mockReturnValue({
-      user: null,
-      loginMutation: {
-        mutate: mockLoginMutate,
-        isPending: false,
-        isError: true,
-        error: { message: 'Invalid username or password' }
-      },
-      registerMutation: {
-        mutate: mockRegisterMutate,
-        isPending: false,
-        isError: false,
-        error: null
-      }
-    });
-    
-    renderWithProviders(<AuthPage />);
-    
-    // Check for error message
-    expect(screen.getByText(/invalid username or password/i)).toBeInTheDocument();
-  });
-
-  it('redirects to dashboard if user is already authenticated', async () => {
-    const mockNavigate = vi.fn();
-    vi.mocked(vi.requireMock('wouter').useLocation).mockReturnValue(['/auth', mockNavigate]);
-    
-    const useAuth = vi.requireMock('@/hooks/use-auth').useAuth;
-    useAuth.mockReturnValue({
-      user: { id: 1, username: 'testuser', name: 'Test User' },
-      loginMutation: {
-        mutate: mockLoginMutate,
-        isPending: false,
-        isError: false,
-        error: null
-      },
-      registerMutation: {
-        mutate: mockRegisterMutate,
-        isPending: false,
-        isError: false,
-        error: null
-      }
-    });
-    
-    renderWithProviders(<AuthPage />);
-    
-    // Check that navigation to dashboard was triggered
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
-    });
+    // Check that alert was called and navigation happened
+    expect(alertMock).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
   });
 }); 

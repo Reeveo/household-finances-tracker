@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Card, 
@@ -34,8 +34,11 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
-  const [activeTab, setActiveTab] = useState("login");
-  const [location, navigate] = useLocation();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const tabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabParam === "register" ? "register" : "login");
+  const navigate = useNavigate();
   const { user, loginMutation, registerMutation } = useAuth();
   const isMobile = useIsMobile();
 
@@ -64,6 +67,15 @@ export default function AuthPage() {
     }
   }, [user, navigate]);
 
+  // Update tab when URL param changes
+  useEffect(() => {
+    if (tabParam === "register") {
+      setActiveTab("register");
+    } else if (tabParam === "login") {
+      setActiveTab("login");
+    }
+  }, [tabParam]);
+
   const onLoginSubmit = (data: LoginFormValues) => {
     loginMutation.mutate(data, {
       onSuccess: () => {
@@ -78,6 +90,12 @@ export default function AuthPage() {
         navigate("/");
       },
     });
+  };
+
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    navigate(`/auth-page${value === "register" ? "?tab=register" : ""}`);
   };
 
   // Show a compact version of the features on mobile
@@ -114,7 +132,7 @@ export default function AuthPage() {
             </CardDescription>
           </CardHeader>
           
-          <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
+          <Tabs defaultValue="login" value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="grid grid-cols-2 w-full">
               <TabsTrigger value="login" className="text-xs sm:text-sm py-1.5 sm:py-2">Login</TabsTrigger>
               <TabsTrigger value="register" className="text-xs sm:text-sm py-1.5 sm:py-2">Register</TabsTrigger>
@@ -177,7 +195,7 @@ export default function AuthPage() {
               
               <div className="text-center text-xs sm:text-sm text-muted-foreground">
                 <span>Don't have an account?</span>{" "}
-                <Button variant="link" className="p-0 h-auto text-xs sm:text-sm" onClick={() => setActiveTab("register")}>
+                <Button variant="link" className="p-0 h-auto text-xs sm:text-sm" onClick={() => handleTabChange("register")}>
                   Sign up
                 </Button>
               </div>
@@ -279,7 +297,7 @@ export default function AuthPage() {
               
               <div className="text-center text-xs sm:text-sm text-muted-foreground">
                 <span>Already have an account?</span>{" "}
-                <Button variant="link" className="p-0 h-auto text-xs sm:text-sm" onClick={() => setActiveTab("login")}>
+                <Button variant="link" className="p-0 h-auto text-xs sm:text-sm" onClick={() => handleTabChange("login")}>
                   Log in
                 </Button>
               </div>

@@ -1,15 +1,13 @@
-import { Sidebar } from "@/components/layout/sidebar";
-import { SummaryCards } from "@/components/dashboard/summary-cards";
-import { MonthlySpendingChart } from "@/components/dashboard/monthly-spending-chart";
-import { SavingsChart } from "@/components/dashboard/savings-chart";
-import { NetWorthChart } from "@/components/dashboard/net-worth-chart";
-import { RecentTransactions } from "@/components/dashboard/recent-transactions";
-import { Button } from "@/components/ui/button";
+import { Sidebar } from "../components/layout/sidebar";
+import { SummaryCards } from "../components/dashboard/summary-cards";
+import { MonthlySpendingChart } from "../components/dashboard/monthly-spending-chart";
+import { SavingsChart } from "../components/dashboard/savings-chart";
+import { NetWorthChart } from "../components/dashboard/net-worth-chart";
+import { RecentTransactions } from "../components/dashboard/recent-transactions";
+import { Button } from "../components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function DashboardPage() {
-  const isMobile = useIsMobile();
   const lastUpdated = new Date().toLocaleString('en-US', {
     hour: 'numeric',
     minute: 'numeric',
