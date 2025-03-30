@@ -61,7 +61,11 @@ import {
   ArrowRight,
   Columns,
   Calendar,
-  Info
+  Info,
+  Filter,
+  ArrowUpDown,
+  Trash2,
+  Search
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -400,12 +404,106 @@ export function CSVImport() {
   const [hasHeaderRow, setHasHeaderRow] = useState(true);
   const { toast } = useToast();
   
+  // New state for transaction selection, filtering and sorting
+  const [selectedTransactionIds, setSelectedTransactionIds] = useState<Set<string>>(new Set());
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
+  
+  // Filter state
+  const [filters, setFilters] = useState({
+    status: 'all', // 'all', 'valid', 'invalid', 'duplicate'
+    type: 'all', // 'all', 'income', 'expense'
+    minAmount: '',
+    maxAmount: '',
+    search: '',
+    category: 'all',
+  });
+  
+  // Sort state
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof BankTransaction | null;
+    direction: 'ascending' | 'descending';
+  }>({
+    key: null,
+    direction: 'ascending'
+  });
+  
+  // Show/hide filter panel
+  const [showFilters, setShowFilters] = useState(false);
+  
   // Get current bank format
   const currentBankFormat = useMemo(() => {
     return BANK_FORMATS.find(format => format.name === selectedBankFormat) || BANK_FORMATS[0];
   }, [selectedBankFormat]);
   
-  // Statistics for the import process
+  // Filter and sort transactions
+  const filteredAndSortedTransactions = useMemo(() => {
+    // First, filter the transactions
+    let result = [...csvData].filter(transaction => {
+      // Status filter
+      if (filters.status === 'valid' && !transaction.isValid) return false;
+      if (filters.status === 'invalid' && transaction.isValid) return false;
+      if (filters.status === 'duplicate' && !transaction.isDuplicate) return false;
+      
+      // Type filter
+      if (filters.type === 'income' && transaction.amount <= 0) return false;
+      if (filters.type === 'expense' && transaction.amount >= 0) return false;
+      
+      // Amount range filter
+      const minAmount = filters.minAmount ? parseFloat(filters.minAmount) : null;
+      const maxAmount = filters.maxAmount ? parseFloat(filters.maxAmount) : null;
+      
+      if (minAmount !== null && Math.abs(transaction.amount) < minAmount) return false;
+      if (maxAmount !== null && Math.abs(transaction.amount) > maxAmount) return false;
+      
+      // Category filter
+      if (filters.category !== 'all' && transaction.category !== filters.category) return false;
+      
+      // Search filter (description)
+      if (filters.search && !transaction.description.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      
+      return true;
+    });
+    
+    // Then, sort the transactions
+    if (sortConfig.key) {
+      result.sort((a, b) => {
+        // Safer comparison that handles different types
+        const aValue = a[sortConfig.key!];
+        const bValue = b[sortConfig.key!];
+        
+        // Handle different field types properly
+        if (sortConfig.key === 'amount') {
+          // Numeric comparison
+          return sortConfig.direction === 'ascending' 
+            ? (a.amount || 0) - (b.amount || 0)
+            : (b.amount || 0) - (a.amount || 0);
+        } else if (sortConfig.key === 'transactionDate') {
+          // Date comparison (as strings in YYYY-MM-DD format)
+          return sortConfig.direction === 'ascending'
+            ? a.transactionDate.localeCompare(b.transactionDate)
+            : b.transactionDate.localeCompare(a.transactionDate);
+        } else if (typeof aValue === 'string' && typeof bValue === 'string') {
+          // String comparison
+          return sortConfig.direction === 'ascending'
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+        } else {
+          // Fallback comparison
+          if (aValue < bValue) {
+            return sortConfig.direction === 'ascending' ? -1 : 1;
+          }
+          if (aValue > bValue) {
+            return sortConfig.direction === 'ascending' ? 1 : -1;
+          }
+          return 0;
+        }
+      });
+    }
+    
+    return result;
+  }, [csvData, filters, sortConfig]);
+  
+  // Statistics for the import process (now uses filtered transactions)
   const importStats = useMemo(() => {
     const total = csvData.length;
     const validCount = csvData.filter(t => t.isValid).length;
@@ -429,6 +527,100 @@ export function CSVImport() {
       expenseTotal
     };
   }, [csvData]);
+  
+  // Filtered stats for the current view
+  const filteredStats = useMemo(() => {
+    const total = filteredAndSortedTransactions.length;
+    const validCount = filteredAndSortedTransactions.filter(t => t.isValid).length;
+    const invalidCount = filteredAndSortedTransactions.filter(t => !t.isValid).length;
+    const duplicateCount = filteredAndSortedTransactions.filter(t => t.isDuplicate).length;
+    
+    return {
+      total,
+      validCount,
+      invalidCount,
+      duplicateCount
+    };
+  }, [filteredAndSortedTransactions]);
+  
+  // Selection handling
+  const handleSelectTransaction = (id: string, isSelected: boolean) => {
+    setSelectedTransactionIds(prev => {
+      const newSelection = new Set(prev);
+      if (isSelected) {
+        newSelection.add(id);
+      } else {
+        newSelection.delete(id);
+      }
+      return newSelection;
+    });
+  };
+  
+  // Select all transactions in the current filtered view
+  const handleSelectAll = (isSelected: boolean) => {
+    if (isSelected) {
+      const allIds = filteredAndSortedTransactions.map(t => t.id);
+      setSelectedTransactionIds(new Set(allIds));
+    } else {
+      setSelectedTransactionIds(new Set());
+    }
+  };
+  
+  // Select all invalid transactions
+  const handleSelectAllInvalid = () => {
+    const invalidIds = csvData.filter(t => !t.isValid).map(t => t.id);
+    setSelectedTransactionIds(new Set(invalidIds));
+  };
+  
+  // Remove selected transactions
+  const handleRemoveSelected = () => {
+    if (selectedTransactionIds.size === 0) return;
+    setRemoveConfirmOpen(true);
+  };
+  
+  // Confirm and execute removal
+  const confirmRemoveSelected = () => {
+    const newData = csvData.filter(t => !selectedTransactionIds.has(t.id));
+    setCsvData(newData);
+    setSelectedTransactionIds(new Set());
+    setRemoveConfirmOpen(false);
+    
+    toast({
+      title: "Transactions removed",
+      description: `${selectedTransactionIds.size} transactions have been removed from the import.`,
+      variant: "default"
+    });
+  };
+  
+  // Reset filters
+  const resetFilters = () => {
+    setFilters({
+      status: 'all',
+      type: 'all',
+      minAmount: '',
+      maxAmount: '',
+      search: '',
+      category: 'all',
+    });
+  };
+  
+  // Handle sort requests
+  const requestSort = (key: keyof BankTransaction) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    
+    setSortConfig({ key, direction });
+  };
+  
+  // Determine if all filtered transactions are selected
+  const isAllSelected = filteredAndSortedTransactions.length > 0 && 
+                        filteredAndSortedTransactions.every(t => selectedTransactionIds.has(t.id));
+                        
+  // Determine if some but not all filtered transactions are selected
+  const isSomeSelected = selectedTransactionIds.size > 0 && !isAllSelected;
   
   // Handle file selection
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1569,11 +1761,23 @@ export function CSVImport() {
       {/* Enhanced validation summary section */}
       {csvData.filter(t => !t.isValid).length > 0 && (
         <div className="border border-red-200 rounded-md overflow-hidden">
-          <div className="bg-red-50 p-3 border-b border-red-200 flex items-center">
-            <AlertTriangle className="h-4 w-4 text-red-500 mr-2" />
-            <h5 className="text-sm font-medium text-red-800">
-              Validation Issues Summary
-            </h5>
+          <div className="bg-red-50 p-3 border-b border-red-200 flex items-center justify-between">
+            <div className="flex items-center">
+              <AlertTriangle className="h-4 w-4 text-red-500 mr-2" />
+              <h5 className="text-sm font-medium text-red-800">
+                Validation Issues Summary
+              </h5>
+            </div>
+            <div>
+              <Button 
+                size="sm" 
+                variant="destructive" 
+                className="text-xs h-8"
+                onClick={handleSelectAllInvalid}
+              >
+                Select All Invalid
+              </Button>
+            </div>
           </div>
           <div className="p-4">
             <div className="mb-3">
@@ -1622,34 +1826,198 @@ export function CSVImport() {
         </div>
       )}
 
+      {/* Filter panel */}
       <div className="border rounded-md overflow-hidden">
         <div className="bg-muted/20 p-3 border-b">
-          <div className="flex justify-between items-center">
-            <h3 className="text-sm font-medium">Transaction Details</h3>
+          <div className="flex items-center justify-between">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              {showFilters ? 'Hide Filters' : 'Show Filters'}
+            </Button>
+            
+            {/* Display active filter count */}
+            {Object.values(filters).some(v => v !== 'all' && v !== '') && (
+              <Badge variant="outline" className="ml-2">
+                {Object.values(filters).filter(v => v !== 'all' && v !== '').length} active filters
+              </Badge>
+            )}
+            
             <div className="flex items-center gap-2">
-              {/* Add legend for error indicators */}
-              <div className="flex items-center mr-4">
-                <div className="w-3 h-3 bg-red-50 border border-red-200 mr-1"></div>
-                <span className="text-xs text-muted-foreground">Invalid</span>
-              </div>
-              <div className="flex items-center mr-4">
-                <div className="w-3 h-3 bg-yellow-50 border border-yellow-200 mr-1"></div>
-                <span className="text-xs text-muted-foreground">Duplicate</span>
-              </div>
+              {selectedTransactionIds.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
+                    {selectedTransactionIds.size} selected
+                  </Badge>
+                  <Button 
+                    size="sm" 
+                    variant="destructive"
+                    onClick={handleRemoveSelected}
+                  >
+                    Remove Selected
+                  </Button>
+                </div>
+              )}
               <Button size="sm" variant="outline" onClick={deduplicateTransactions}>
                 Check for Duplicates
               </Button>
             </div>
           </div>
         </div>
+        
+        {/* Expanded filter panel */}
+        {showFilters && (
+          <div className="p-4 border-b bg-muted/10">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Status</label>
+                <Select 
+                  value={filters.status} 
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Transactions</SelectItem>
+                    <SelectItem value="valid">Valid Only</SelectItem>
+                    <SelectItem value="invalid">Invalid Only</SelectItem>
+                    <SelectItem value="duplicate">Duplicates Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-1 block">Type</label>
+                <Select 
+                  value={filters.type} 
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="income">Income Only</SelectItem>
+                    <SelectItem value="expense">Expenses Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-1 block">Category</label>
+                <Select 
+                  value={filters.category} 
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {CATEGORIES.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-1 block">Min Amount</label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={filters.minAmount}
+                  onChange={(e) => setFilters(prev => ({ ...prev, minAmount: e.target.value }))}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-1 block">Max Amount</label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={filters.maxAmount}
+                  onChange={(e) => setFilters(prev => ({ ...prev, maxAmount: e.target.value }))}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-1 block">Search Description</label>
+                <Input
+                  type="text"
+                  placeholder="Search..."
+                  value={filters.search}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end mt-4">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={resetFilters}
+                className="text-xs"
+              >
+                Reset Filters
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Filter stats */}
+        {filteredAndSortedTransactions.length !== csvData.length && (
+          <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 text-blue-700 text-sm">
+            Showing {filteredAndSortedTransactions.length} of {csvData.length} transactions 
+            ({filteredStats.validCount} valid, {filteredStats.invalidCount} invalid, {filteredStats.duplicateCount} duplicates)
+          </div>
+        )}
+        
         <div className="max-h-[500px] overflow-y-auto">
           <Table>
             <TableHeader className="bg-muted/40 sticky top-0">
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox 
+                    checked={isAllSelected}
+                    indeterminate={isSomeSelected}
+                    onCheckedChange={handleSelectAll}
+                  />
+                </TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Amount</TableHead>
+                <TableHead className="cursor-pointer" onClick={() => requestSort('transactionDate')}>
+                  <div className="flex items-center">
+                    Date
+                    {sortConfig.key === 'transactionDate' && (
+                      <span className="ml-1">
+                        {sortConfig.direction === 'ascending' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead className="cursor-pointer" onClick={() => requestSort('description')}>
+                  <div className="flex items-center">
+                    Description
+                    {sortConfig.key === 'description' && (
+                      <span className="ml-1">
+                        {sortConfig.direction === 'ascending' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
+                <TableHead className="cursor-pointer" onClick={() => requestSort('amount')}>
+                  <div className="flex items-center">
+                    Amount
+                    {sortConfig.key === 'amount' && (
+                      <span className="ml-1">
+                        {sortConfig.direction === 'ascending' ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Subcategory</TableHead>
                 <TableHead>Budget Month</TableHead>
@@ -1657,7 +2025,7 @@ export function CSVImport() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {csvData.map((transaction, index) => (
+              {filteredAndSortedTransactions.map((transaction, index) => (
                 <TableRow 
                   key={transaction.id} 
                   className={
@@ -1665,6 +2033,12 @@ export function CSVImport() {
                     !transaction.isValid ? "bg-red-50" : ""
                   }
                 >
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedTransactionIds.has(transaction.id)}
+                      onCheckedChange={(checked) => handleSelectTransaction(transaction.id, !!checked)}
+                    />
+                  </TableCell>
                   <TableCell className="w-10">
                     {!transaction.isValid ? (
                       <TooltipProvider>
@@ -1712,6 +2086,8 @@ export function CSVImport() {
                       </TooltipProvider>
                     )}
                   </TableCell>
+                  
+                  {/* Rest of the TableRow remains the same */}
                   <TableCell className="whitespace-nowrap">
                     {transaction.transactionDate}
                     {!transaction.isValid && transaction.validationErrors?.includes('Invalid date format') && (
@@ -1825,94 +2201,129 @@ export function CSVImport() {
                     </Select>
                   </TableCell>
                   <TableCell>
-                    {transaction.isValid && (
+                    <div className="flex items-center space-x-1">
+                      {transaction.isValid && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0"
+                                onClick={() => applyCategoryToSimilar(index)}
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Apply to similar transactions</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {!transaction.isValid && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 text-red-500"
+                            >
+                              <Info className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle className="text-red-600 flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5" />
+                                Invalid Transaction
+                              </DialogTitle>
+                              <DialogDescription>
+                                This transaction has validation errors and will be excluded from import.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-3">
+                              <div className="bg-red-50 p-3 rounded-md border border-red-100">
+                                <h4 className="text-sm font-medium text-red-700 mb-2">Validation Errors:</h4>
+                                <ul className="ml-5 list-disc text-sm text-red-600">
+                                  {transaction.validationErrors?.map((error, i) => (
+                                    <li key={i}>{error}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                              
+                              <div className="border-t pt-3">
+                                <h4 className="text-sm font-medium mb-2">Transaction Details:</h4>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                  <div>Date:</div>
+                                  <div className={transaction.validationErrors?.includes('Invalid date format') || transaction.validationErrors?.includes('Missing transaction date') ? 'text-red-600 font-medium' : ''}>
+                                    {transaction.transactionDate || 'Missing'}
+                                  </div>
+                                  
+                                  <div>Description:</div>
+                                  <div className={transaction.validationErrors?.includes('Missing transaction description') ? 'text-red-600 font-medium' : ''}>
+                                    {transaction.description || 'Missing'}
+                                  </div>
+                                  
+                                  <div>Amount:</div>
+                                  <div className={transaction.validationErrors?.includes('Invalid transaction amount') ? 'text-red-600 font-medium' : ''}>
+                                    {isNaN(transaction.amount) ? 'Invalid' : transaction.amount.toFixed(2)}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <DialogFooter className="sm:justify-start">
+                              <DialogTrigger asChild>
+                                <Button type="button" variant="secondary">
+                                  Close
+                                </Button>
+                              </DialogTrigger>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="h-8 w-8 p-0"
-                              onClick={() => applyCategoryToSimilar(index)}
+                              className="h-8 w-8 p-0 text-red-500"
+                              onClick={() => {
+                                // Remove this single transaction
+                                const newData = csvData.filter(t => t.id !== transaction.id);
+                                setCsvData(newData);
+                                // Also remove from selection if selected
+                                if (selectedTransactionIds.has(transaction.id)) {
+                                  setSelectedTransactionIds(prev => {
+                                    const newSelection = new Set(prev);
+                                    newSelection.delete(transaction.id);
+                                    return newSelection;
+                                  });
+                                }
+                                toast({
+                                  title: "Transaction removed",
+                                  description: "The transaction has been removed from the import.",
+                                });
+                              }}
                             >
-                              <RefreshCw className="h-4 w-4" />
+                              <X className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p className="text-xs">Apply to similar transactions</p>
+                            <p className="text-xs">Remove this transaction</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                    )}
-                    {!transaction.isValid && (
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 text-red-500"
-                          >
-                            <Info className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                          <DialogHeader>
-                            <DialogTitle className="text-red-600 flex items-center gap-2">
-                              <AlertTriangle className="h-5 w-5" />
-                              Invalid Transaction
-                            </DialogTitle>
-                            <DialogDescription>
-                              This transaction has validation errors and will be excluded from import.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-3">
-                            <div className="bg-red-50 p-3 rounded-md border border-red-100">
-                              <h4 className="text-sm font-medium text-red-700 mb-2">Validation Errors:</h4>
-                              <ul className="ml-5 list-disc text-sm text-red-600">
-                                {transaction.validationErrors?.map((error, i) => (
-                                  <li key={i}>{error}</li>
-                                ))}
-                              </ul>
-                            </div>
-                            
-                            <div className="border-t pt-3">
-                              <h4 className="text-sm font-medium mb-2">Transaction Details:</h4>
-                              <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div>Date:</div>
-                                <div className={transaction.validationErrors?.includes('Invalid date format') || transaction.validationErrors?.includes('Missing transaction date') ? 'text-red-600 font-medium' : ''}>
-                                  {transaction.transactionDate || 'Missing'}
-                                </div>
-                                
-                                <div>Description:</div>
-                                <div className={transaction.validationErrors?.includes('Missing transaction description') ? 'text-red-600 font-medium' : ''}>
-                                  {transaction.description || 'Missing'}
-                                </div>
-                                
-                                <div>Amount:</div>
-                                <div className={transaction.validationErrors?.includes('Invalid transaction amount') ? 'text-red-600 font-medium' : ''}>
-                                  {isNaN(transaction.amount) ? 'Invalid' : transaction.amount.toFixed(2)}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <DialogFooter className="sm:justify-start">
-                            <DialogTrigger asChild>
-                              <Button type="button" variant="secondary">
-                                Close
-                              </Button>
-                            </DialogTrigger>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
               
-              {csvData.length === 0 && (
+              {filteredAndSortedTransactions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No transactions found
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    No transactions found matching the current filters
                   </TableCell>
                 </TableRow>
               )}
@@ -1932,6 +2343,24 @@ export function CSVImport() {
           Import {csvData.filter(t => t.isValid && !t.isDuplicate).length} Transactions
         </Button>
       </div>
+      
+      {/* Confirmation dialog for bulk removal */}
+      <AlertDialog open={removeConfirmOpen} onOpenChange={setRemoveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Removal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {selectedTransactionIds.size} transactions? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRemoveConfirmOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemoveSelected} className="bg-red-600 hover:bg-red-700">
+              Remove Transactions
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
   
