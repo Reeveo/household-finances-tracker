@@ -50,6 +50,8 @@ export function setupAuth(app: Express) {
       if (!user || !(await comparePasswords(password, user.password))) {
         return done(null, false);
       } else {
+        // DEBUG: Log the user object before passing to done
+        console.log("User object passed to done in LocalStrategy:", JSON.stringify(user, null, 2));
         return done(null, user);
       }
     }),

@@ -55,7 +55,7 @@ The Personal Finance Tracker is a full-stack web application designed to help us
 
 ### Backend
 - Node.js with Express
-- PostgreSQL database
+- PostgreSQL database via Supabase
 - Drizzle ORM with Zod validation
 - Passport.js for authentication
 - Session-based authentication
@@ -64,7 +64,7 @@ The Personal Finance Tracker is a full-stack web application designed to help us
 
 ### Prerequisites
 - Node.js (v18+)
-- PostgreSQL database
+- Docker and Docker Compose (for local Supabase)
 
 ### Installation
 
@@ -79,24 +79,38 @@ cd personal-finance-tracker
 npm install
 ```
 
-3. Set up environment variables
-Create a `.env` file in the root directory with the following variables:
+3. Set up local Supabase instance
+```bash
+npx supabase start
 ```
-DATABASE_URL=postgresql://username:password@localhost:5432/finance_tracker
+
+This will start a local Supabase instance using Docker. The output will show the URLs and keys needed to connect to the database.
+
+4. Set up environment variables
+Create a `.env` file in the root directory with the following variables (use the values from the Supabase CLI output):
+```
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:<PORT>/postgres
+SUPABASE_URL=http://127.0.0.1:<PORT>
+SUPABASE_ANON_KEY=<ANON_KEY_FROM_OUTPUT>
 SESSION_SECRET=your_secret_key_here
 ```
 
-4. Set up the database
+5. Set up the database
 ```bash
 npm run db:push
 ```
 
-5. Start the development server
+6. Start the development server
 ```bash
 npm run dev
 ```
 
-6. Visit `http://localhost:5000` to use the application
+7. Visit `http://localhost:5000` to use the application
+
+8. When you're done, you can stop the local Supabase instance with:
+```bash
+npx supabase stop
+```
 
 ## 📊 Data Model
 
@@ -146,3 +160,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [TanStack Query](https://tanstack.com/query) for data fetching
 - [Drizzle ORM](https://orm.drizzle.team/) for database operations
 - [Recharts](https://recharts.org/) for data visualization
+- [Supabase](https://supabase.com/) for the database and authentication services
