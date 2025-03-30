@@ -19,7 +19,10 @@
 - [x] Set up testing environment (Jest, Cypress)
 - [x] Create test utilities and helpers
 - [x] Define testing standards and documentation
-- [ ] Implement first test suites for core functionality
+- [x] Implement first test suites for core functionality
+  - [x] Transaction management tests
+  - [x] Transaction deletion functionality tests
+  - [ ] User authentication tests
 
 #### Database & API Architecture
 - [x] Design database schema
@@ -58,6 +61,11 @@
 - [x] Add expense tracking
 - [x] Create category management
 - [x] Set up account balance tracking
+- [x] Implement transaction deletion functionality
+- [x] Add confirmation dialogs for destructive actions
+- [x] Implement data persistence across page navigation
+- [x] Add animation effects for improved user experience
+- [ ] Implement transaction bulk operations
 
 ### Sprint 4 (Weeks 7-8)
 #### Basic Dashboard
@@ -131,7 +139,7 @@
 
 #### Launch Preparation
 - [ ] Set up monitoring
-  - [ ] Error tracking (Sentry)
+  - [ ] Error tracking
   - [ ] Performance monitoring
   - [ ] User analytics
 - [ ] Configure analytics

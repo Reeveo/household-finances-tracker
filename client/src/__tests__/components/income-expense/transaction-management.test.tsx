@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TransactionManagement } from '@/components/income-expense/transaction-management';
 import { renderWithProviders } from '../../test-utils';
 
@@ -33,6 +33,28 @@ vi.mock('date-fns', async () => {
     formatDistanceToNow: vi.fn(() => '3 days ago'),
     format: vi.fn(() => '01/01/2023'),
   };
+});
+
+// Mock localStorage with proper typing
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: vi.fn((key: string) => store[key] || null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value.toString();
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key];
+    }),
+    clear: vi.fn(() => {
+      store = {};
+    }),
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
 });
 
 describe('TransactionManagement', () => {
@@ -264,6 +286,165 @@ describe('TransactionManagement', () => {
     await waitFor(() => {
       expect(screen.getByText('Netflix Subscription')).toBeInTheDocument();
       expect(screen.queryByText('Grocery Shopping')).not.toBeInTheDocument();
+    });
+  });
+
+  // New tests for transaction deletion functionality
+  describe('Transaction Deletion Functionality', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      localStorageMock.clear();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('removes the transaction from the list when deleted', async () => {
+      // Setup localStorage with test data
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+
+      renderWithProviders(<TransactionManagement />);
+      
+      // Verify the transaction exists initially
+      expect(screen.getByText('Grocery Shopping')).toBeInTheDocument();
+      
+      // Find and click delete button for first transaction
+      const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+      fireEvent.click(deleteButtons[0]);
+      
+      // Confirm deletion in the dialog
+      await waitFor(() => {
+        const confirmButton = screen.getByRole('button', { name: /delete/i });
+        fireEvent.click(confirmButton);
+      });
+
+      // Move time forward to account for animation duration
+      act(() => {
+        vi.advanceTimersByTime(350);
+      });
+      
+      // Verify the transaction is removed
+      await waitFor(() => {
+        expect(screen.queryByText('Grocery Shopping')).not.toBeInTheDocument();
+      });
+      
+      // Verify localStorage was updated
+      expect(localStorageMock.setItem).toHaveBeenCalledWith(
+        'household-finance-transactions',
+        expect.stringContaining('Netflix')
+      );
+      expect(localStorageMock.setItem).toHaveBeenCalledWith(
+        'household-finance-transactions',
+        expect.not.stringContaining('Grocery Shopping')
+      );
+    });
+
+    it('shows a confirmation dialog before deleting a transaction', async () => {
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+      
+      renderWithProviders(<TransactionManagement />);
+      
+      // Find and click delete button for first transaction
+      const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+      fireEvent.click(deleteButtons[0]);
+      
+      // Check confirmation dialog appears with correct content
+      await waitFor(() => {
+        expect(screen.getByText(/are you sure you want to delete this transaction?/i)).toBeInTheDocument();
+        expect(screen.getByText(/this action cannot be undone/i)).toBeInTheDocument();
+        
+        // Verify transaction details are shown in the dialog
+        expect(screen.getByText('Grocery Shopping')).toBeInTheDocument();
+        expect(screen.getByText('£45.67')).toBeInTheDocument();
+        
+        // Verify dialog has both Cancel and Delete buttons
+        expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+      });
+      
+      // Test that Cancel closes the dialog without deleting
+      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+      
+      await waitFor(() => {
+        expect(screen.queryByText(/are you sure you want to delete this transaction?/i)).not.toBeInTheDocument();
+      });
+      
+      // Verify the transaction still exists
+      expect(screen.getByText('Grocery Shopping')).toBeInTheDocument();
+    });
+
+    it('applies animation when deleting a transaction', async () => {
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+      
+      const { container } = renderWithProviders(<TransactionManagement />);
+      
+      // Find and click delete button for first transaction
+      const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
+      fireEvent.click(deleteButtons[0]);
+      
+      // Confirm deletion
+      await waitFor(() => {
+        const confirmButton = screen.getByRole('button', { name: /delete/i });
+        fireEvent.click(confirmButton);
+      });
+      
+      // Check for animation class being applied (before the timer completes)
+      expect(container.querySelector('.opacity-0')).toBeTruthy();
+      expect(container.querySelector('.transition-all')).toBeTruthy();
+      expect(container.querySelector('.duration-300')).toBeTruthy();
+      
+      // Advance timers to complete the animation
+      act(() => {
+        vi.advanceTimersByTime(350);
+      });
+      
+      // After animation, the item should be removed
+      await waitFor(() => {
+        expect(screen.queryByText('Grocery Shopping')).not.toBeInTheDocument();
+      });
+    });
+
+    it('allows deleting a transaction from the edit modal', async () => {
+      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+      
+      renderWithProviders(<TransactionManagement />);
+      
+      // Open edit form for the first transaction
+      const editButtons = screen.getAllByRole('button', { name: /edit/i });
+      fireEvent.click(editButtons[0]);
+      
+      // Verify edit modal is open
+      await waitFor(() => {
+        expect(screen.getByText(/edit transaction/i)).toBeInTheDocument();
+      });
+      
+      // There should be a Delete button in the dialog footer
+      const deleteButton = screen.getByRole('button', { name: /delete/i });
+      expect(deleteButton).toBeInTheDocument();
+      
+      // Click the delete button
+      fireEvent.click(deleteButton);
+      
+      // Edit dialog should close and confirmation dialog should open
+      await waitFor(() => {
+        expect(screen.queryByText(/edit transaction/i)).not.toBeInTheDocument();
+        expect(screen.getByText(/are you sure you want to delete this transaction?/i)).toBeInTheDocument();
+      });
+      
+      // Confirm deletion
+      const confirmButton = screen.getByRole('button', { name: /delete/i });
+      fireEvent.click(confirmButton);
+      
+      // Advance timers to complete the animation
+      act(() => {
+        vi.advanceTimersByTime(350);
+      });
+      
+      // Transaction should be removed
+      await waitFor(() => {
+        expect(screen.queryByText('Grocery Shopping')).not.toBeInTheDocument();
+      });
     });
   });
 }); 

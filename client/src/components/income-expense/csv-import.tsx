@@ -467,10 +467,12 @@ export function CSVImport() {
     // Then, sort the transactions
     if (sortConfig.key) {
       result.sort((a, b) => {
-        // Safer comparison that handles different types
+        // Safer comparison that handles different types and ensures a number is always returned
         const aValue = a[sortConfig.key!];
         const bValue = b[sortConfig.key!];
-        
+        if (typeof aValue === 'undefined' || typeof bValue === 'undefined') {
+          return 0; // Return 0 to ensure a number is always returned and undefined values are treated as equal
+        }
         // Handle different field types properly
         if (sortConfig.key === 'amount') {
           // Numeric comparison
@@ -488,12 +490,15 @@ export function CSVImport() {
             ? aValue.localeCompare(bValue)
             : bValue.localeCompare(aValue);
         } else {
-          // Fallback comparison
-          if (aValue < bValue) {
-            return sortConfig.direction === 'ascending' ? -1 : 1;
-          }
-          if (aValue > bValue) {
-            return sortConfig.direction === 'ascending' ? 1 : -1;
+          // Fallback comparison with undefined handling
+          if (aValue !== undefined && bValue !== undefined) {
+            if (aValue < bValue) {
+              return sortConfig.direction === 'ascending' ? -1 : 1;
+            }
+            if (aValue > bValue) {
+              return sortConfig.direction === 'ascending' ? 1 : -1;
+            }
+            return 0;
           }
           return 0;
         }
@@ -1983,7 +1988,6 @@ export function CSVImport() {
                 <TableHead className="w-10">
                   <Checkbox 
                     checked={isAllSelected}
-                    indeterminate={isSomeSelected}
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
