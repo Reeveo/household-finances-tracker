@@ -121,16 +121,26 @@ const createTables = async () => {
 
     // Create session table for connect-pg-simple
     // This table is used to store session data
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS "session" (
-        "sid" varchar NOT NULL COLLATE "default",
-        "sess" json NOT NULL,
-        "expire" timestamp(6) NOT NULL,
-        CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
-      )
-    `);
+    // Use different DDL for SQLite vs PostgreSQL due to COLLATE
+    const sessionTableSql = process.env.NODE_ENV === 'production'
+      ? `
+        CREATE TABLE IF NOT EXISTS "session" (
+          "sid" varchar NOT NULL COLLATE "default",
+          "sess" json NOT NULL,
+          "expire" timestamp(6) NOT NULL,
+          CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+        )
+      `
+      : `
+        CREATE TABLE IF NOT EXISTS "session" (
+          "sid" varchar NOT NULL PRIMARY KEY,
+          "sess" text NOT NULL, -- SQLite uses TEXT for JSON
+          "expire" datetime NOT NULL -- SQLite uses DATETIME
+        )
+      `;
+    await pool.query(sessionTableSql);
 
-    // Index on the expire column
+    // Index on the expire column (syntax is compatible)
     await pool.query(`
       CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire")
     `);
