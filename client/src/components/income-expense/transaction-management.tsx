@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Card, 
   CardContent, 
@@ -49,7 +49,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CalendarIcon, Search, Plus, Filter, RefreshCcw, Edit, Calendar } from "lucide-react";
+import { CalendarIcon, Search, Plus, Filter, RefreshCcw, Edit, Calendar, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -251,13 +251,37 @@ type Transaction = {
   notes: string;
 };
 
+// Add CSS for animation
+const fadeOutAnimation = "opacity-0 h-0 transition-all duration-300 transform scale-95";
+const normalRow = "hover:bg-muted/50 transition-all duration-300";
+
 export function TransactionManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [monthFilter, setMonthFilter] = useState("All");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [localTransactions, setLocalTransactions] = useState<Transaction[]>(transactions);
+  const [localTransactions, setLocalTransactions] = useState<Transaction[]>([]);
+  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [animatingDeleteId, setAnimatingDeleteId] = useState<number | null>(null);
+
+  // Load transactions from localStorage on component mount
+  useEffect(() => {
+    const savedTransactions = localStorage.getItem('household-finance-transactions');
+    if (savedTransactions) {
+      setLocalTransactions(JSON.parse(savedTransactions));
+    } else {
+      setLocalTransactions(transactions);
+    }
+  }, []);
+
+  // Save transactions to localStorage whenever they change
+  useEffect(() => {
+    if (localTransactions.length > 0) {
+      localStorage.setItem('household-finance-transactions', JSON.stringify(localTransactions));
+    }
+  }, [localTransactions]);
 
   // Form for adding/editing transactions
   const form = useForm<TransactionFormValues>({
@@ -395,6 +419,33 @@ export function TransactionManagement() {
   // Get isMobile from useIsMobile hook
   const isMobileState = useIsMobile();
 
+  // Handle delete transaction
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    setDeletingTransaction(transaction);
+    setShowDeleteDialog(true);
+  };
+  
+  // Confirm delete transaction with animation
+  const confirmDelete = () => {
+    if (deletingTransaction) {
+      // Set the animating ID to trigger CSS transition
+      setAnimatingDeleteId(deletingTransaction.id);
+      
+      // Close the dialog immediately
+      setShowDeleteDialog(false);
+      
+      // Wait for animation to complete before removing from state
+      setTimeout(() => {
+        const updatedTransactions = localTransactions.filter(t => t.id !== deletingTransaction.id);
+        setLocalTransactions(updatedTransactions);
+        // Save to localStorage immediately after deletion
+        localStorage.setItem('household-finance-transactions', JSON.stringify(updatedTransactions));
+        setDeletingTransaction(null);
+        setAnimatingDeleteId(null);
+      }, 300); // Match this to the duration in CSS transition
+    }
+  };
+
   return (
     <Card className="shadow-sm relative">
       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
@@ -492,12 +543,15 @@ export function TransactionManagement() {
                   <TableHead className="whitespace-nowrap w-[100px]">Category</TableHead>
                   <TableHead className="whitespace-nowrap w-[120px]">Budget Month</TableHead>
                   <TableHead className="whitespace-nowrap text-right w-[100px]">Amount</TableHead>
-                  <TableHead className="text-right w-[50px]">Actions</TableHead>
+                  <TableHead className="text-right w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id} className="hover:bg-muted/50">
+                  <TableRow 
+                    key={transaction.id} 
+                    className={`${animatingDeleteId === transaction.id ? fadeOutAnimation : normalRow}`}
+                  >
                     <TableCell className="whitespace-nowrap">
                       <div className="flex items-center">
                         <CalendarIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
@@ -543,15 +597,26 @@ export function TransactionManagement() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 w-8 p-0"
-                        onClick={() => handleEditTransaction(transaction)}
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
+                      <div className="flex justify-end space-x-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleEditTransaction(transaction)}
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => handleDeleteTransaction(transaction)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -934,12 +999,88 @@ export function TransactionManagement() {
               />
               
               <DialogFooter>
+                {editingTransaction && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => {
+                      handleDialogChange(false);
+                      setDeletingTransaction(editingTransaction);
+                      setTimeout(() => {
+                        setShowDeleteDialog(true);
+                      }, 100);
+                    }}
+                    className="mr-auto"
+                  >
+                    Delete
+                  </Button>
+                )}
                 <Button type="submit">
                   {editingTransaction ? "Save Changes" : "Add Transaction"}
                 </Button>
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowDeleteDialog(false);
+          setDeletingTransaction(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Transaction</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this transaction? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {deletingTransaction && (
+            <div className="py-4 space-y-3">
+              <div className="flex justify-between items-center py-2 px-3 bg-muted/50 rounded-lg">
+                <span className="font-medium">{deletingTransaction.description}</span>
+                <span className={deletingTransaction.amount < 0 ? 'text-red-600' : 'text-green-600'}>
+                  {deletingTransaction.amount < 0 ? '-' : ''}£{Math.abs(deletingTransaction.amount).toFixed(2)}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Date:</span>
+                  <span>{new Date(deletingTransaction.date).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Category:</span>
+                  <span>{deletingTransaction.subcategory}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Merchant:</span>
+                  <span>{deletingTransaction.merchant}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setDeletingTransaction(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>
