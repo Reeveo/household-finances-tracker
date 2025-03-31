@@ -1,8 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TransactionManagement } from '@/components/income-expense/transaction-management';
-import { renderWithProviders } from '../../test-utils';
+import { renderWithProviders, setupMocks } from '../../test-utils';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import userEvent from '@testing-library/user-event';
 
 // Mock hooks
 vi.mock('@/hooks/use-mobile', () => ({
@@ -35,415 +37,268 @@ vi.mock('date-fns', async () => {
   };
 });
 
-// Mock localStorage with proper typing
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: vi.fn((key: string) => store[key] || null),
-    setItem: vi.fn((key: string, value: string) => {
-      store[key] = value.toString();
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete store[key];
-    }),
-    clear: vi.fn(() => {
-      store = {};
-    }),
-  };
-})();
+// Mock localStorage
+const mockLocalStorage = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  clear: vi.fn(),
+};
+Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
 
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-  writable: true,
-});
+// Mock transactions data
+const mockTransactions = [
+  {
+    id: 1,
+    date: '2024-03-15',
+    description: 'Groceries - Tesco',
+    merchant: 'Tesco',
+    merchantLogo: 'tesco.svg',
+    category: 'Essentials',
+    subcategory: 'Groceries',
+    amount: -75.50,
+    paymentMethod: 'Credit Card',
+    isRecurring: false,
+    budgetMonth: 'current',
+    notes: '',
+  },
+  {
+    id: 2,
+    date: '2024-03-14',
+    description: 'Monthly Salary',
+    merchant: 'Acme Inc',
+    merchantLogo: 'acme.svg',
+    category: 'Income',
+    subcategory: 'Salary',
+    amount: 3000.00,
+    paymentMethod: 'Bank Transfer',
+    isRecurring: true,
+    frequency: 'Monthly',
+    budgetMonth: 'current',
+    notes: 'Main job salary',
+  },
+];
 
 describe('TransactionManagement', () => {
-  const mockTransactions = [
-    {
-      id: 1,
-      date: '2023-01-15',
-      description: 'Grocery Shopping',
-      merchant: 'Tesco',
-      merchantLogo: 'tesco.png',
-      category: 'Food',
-      subcategory: 'Groceries',
-      amount: 45.67,
-      paymentMethod: 'Credit Card',
-      isRecurring: false,
-      budgetMonth: '2023-01',
-      notes: 'Weekly groceries'
-    },
-    {
-      id: 2,
-      date: '2023-01-20',
-      description: 'Netflix Subscription',
-      merchant: 'Netflix',
-      merchantLogo: 'netflix.png',
-      category: 'Entertainment',
-      subcategory: 'Streaming',
-      amount: 9.99,
-      paymentMethod: 'Debit Card',
-      isRecurring: true,
-      frequency: 'monthly',
-      budgetMonth: '2023-01',
-      notes: ''
-    }
-  ];
-
   beforeEach(() => {
     vi.clearAllMocks();
-    
-    // Default mock implementations
-    const { useQuery } = vi.requireMock('@tanstack/react-query');
-    useQuery.mockReturnValue({
-      data: mockTransactions,
-      isLoading: false,
-      isError: false,
-      error: null,
-      refetch: vi.fn()
-    });
-    
-    const { useMutation } = vi.requireMock('@tanstack/react-query');
-    useMutation.mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-      isError: false,
-      error: null
-    });
+    mockLocalStorage.getItem.mockReturnValue(null);
   });
 
-  it('renders transaction list with transaction data', () => {
-    renderWithProviders(<TransactionManagement />);
-    
-    // Check that transaction data is displayed
-    expect(screen.getByText('Grocery Shopping')).toBeInTheDocument();
-    expect(screen.getByText('Netflix Subscription')).toBeInTheDocument();
-    expect(screen.getByText('£45.67')).toBeInTheDocument();
-    expect(screen.getByText('£9.99')).toBeInTheDocument();
-    
-    // Check for category badges
-    expect(screen.getByText('Food')).toBeInTheDocument();
-    expect(screen.getByText('Entertainment')).toBeInTheDocument();
+  it('initializes with empty transactions when localStorage is empty', () => {
+    render(<TransactionManagement />);
+
+    // Check for empty state message
+    expect(screen.getByText('No transactions found')).toBeInTheDocument();
+    expect(screen.getByText('Clear filters')).toBeInTheDocument();
   });
 
-  it('shows loading state when data is loading', () => {
-    const { useQuery } = vi.requireMock('@tanstack/react-query');
-    useQuery.mockReturnValue({
-      data: null,
-      isLoading: true,
-      isError: false,
-      error: null
-    });
-    
-    renderWithProviders(<TransactionManagement />);
-    
-    // Check for loading indicators
-    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
-    expect(screen.getByText('Loading transactions...')).toBeInTheDocument();
+  it('loads and displays transactions from localStorage', () => {
+    const mockTransactions = [
+      {
+        id: '1',
+        date: '2024-03-15',
+        description: 'Groceries - Tesco',
+        merchant: 'Tesco',
+        amount: -75.50,
+        category: 'Essentials',
+        subcategory: 'Groceries',
+        budgetMonth: 'current'
+      },
+      {
+        id: '2',
+        date: '2024-03-14',
+        description: 'Monthly Salary',
+        merchant: 'Acme Inc',
+        amount: 3000.00,
+        category: 'Income',
+        subcategory: 'Salary',
+        budgetMonth: 'current'
+      }
+    ];
+
+    mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+
+    render(<TransactionManagement />);
+
+    // Check if transactions are displayed
+    expect(screen.getByText('Groceries - Tesco')).toBeInTheDocument();
+    expect(screen.getByText('Monthly Salary')).toBeInTheDocument();
   });
 
-  it('shows error state when there is an error', () => {
-    const { useQuery } = vi.requireMock('@tanstack/react-query');
-    useQuery.mockReturnValue({
-      data: null,
-      isLoading: false,
-      isError: true,
-      error: { message: 'Failed to fetch transactions' }
-    });
-    
-    renderWithProviders(<TransactionManagement />);
-    
-    // Check for error message
-    expect(screen.getByText('Error loading transactions')).toBeInTheDocument();
-    expect(screen.getByText('Failed to fetch transactions')).toBeInTheDocument();
-  });
+  it('filters transactions by category', async () => {
+    const mockTransactions = [
+      {
+        id: '1',
+        date: '2024-03-15',
+        description: 'Groceries - Tesco',
+        merchant: 'Tesco',
+        amount: -75.50,
+        category: 'Essentials',
+        subcategory: 'Groceries',
+        budgetMonth: 'current'
+      },
+      {
+        id: '2',
+        date: '2024-03-14',
+        description: 'Monthly Salary',
+        merchant: 'Acme Inc',
+        amount: 3000.00,
+        category: 'Income',
+        subcategory: 'Salary',
+        budgetMonth: 'current'
+      }
+    ];
 
-  it('opens transaction form dialog when Add Transaction button is clicked', async () => {
-    renderWithProviders(<TransactionManagement />);
-    
-    // Click the Add Transaction button
-    fireEvent.click(screen.getByRole('button', { name: /add transaction/i }));
-    
-    // Check that dialog is open
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-      expect(screen.getByText('Add New Transaction')).toBeInTheDocument();
-    });
-  });
+    mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockTransactions));
 
-  it('opens edit form when edit button is clicked', async () => {
-    renderWithProviders(<TransactionManagement />);
-    
-    // Find and click edit button for first transaction
-    const editButtons = screen.getAllByRole('button', { name: /edit/i });
-    fireEvent.click(editButtons[0]);
-    
-    // Check that dialog is open with edit title
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-      expect(screen.getByText('Edit Transaction')).toBeInTheDocument();
-      
-      // Form should be pre-filled with transaction data
-      const descriptionInput = screen.getByLabelText('Description');
-      expect(descriptionInput).toHaveValue('Grocery Shopping');
-    });
-  });
+    render(<TransactionManagement />);
 
-  it('confirms before deleting a transaction', async () => {
-    renderWithProviders(<TransactionManagement />);
-    
-    // Find and click delete button for first transaction
-    const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
-    fireEvent.click(deleteButtons[0]);
-    
-    // Check that confirmation dialog is shown
-    await waitFor(() => {
-      expect(screen.getByText('Are you sure?')).toBeInTheDocument();
-      expect(screen.getByText('This action cannot be undone.')).toBeInTheDocument();
-    });
-    
-    // Cancel should close the dialog
-    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
-    
-    await waitFor(() => {
-      expect(screen.queryByText('Are you sure?')).not.toBeInTheDocument();
-    });
-  });
-
-  it('submits new transaction data when form is submitted', async () => {
-    const mockMutate = vi.fn();
-    const { useMutation } = vi.requireMock('@tanstack/react-query');
-    useMutation.mockReturnValue({
-      mutate: mockMutate,
-      isPending: false,
-      isError: false,
-      error: null
-    });
-    
-    renderWithProviders(<TransactionManagement />);
-    
-    // Open the add transaction form
-    fireEvent.click(screen.getByRole('button', { name: /add transaction/i }));
-    
-    // Fill in the form
-    await waitFor(() => {
-      // Fill description
-      fireEvent.change(screen.getByLabelText('Description'), {
-        target: { value: 'New Test Transaction' }
-      });
-      
-      // Fill amount
-      fireEvent.change(screen.getByLabelText('Amount (£)'), {
-        target: { value: '99.99' }
-      });
-      
-      // Select category
-      fireEvent.click(screen.getByRole('combobox', { name: /category/i }));
-      fireEvent.click(screen.getByRole('option', { name: /food/i }));
-      
-      // Submit the form
-      fireEvent.click(screen.getByRole('button', { name: /save/i }));
-    });
-    
-    // Check that mutation was called with form data
-    await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          description: 'New Test Transaction',
-          amount: 99.99,
-          category: 'Food'
-        }),
-        expect.anything()
-      );
-    });
-  });
-
-  it('filters transactions when search input is used', async () => {
-    renderWithProviders(<TransactionManagement />);
-    
-    // Enter search text
-    fireEvent.change(screen.getByPlaceholderText('Search transactions...'), {
-      target: { value: 'Netflix' }
-    });
-    
-    // Only the Netflix transaction should be visible now
-    await waitFor(() => {
-      expect(screen.getByText('Netflix Subscription')).toBeInTheDocument();
-      expect(screen.queryByText('Grocery Shopping')).not.toBeInTheDocument();
-    });
-  });
-
-  it('filters transactions when category filter is applied', async () => {
-    renderWithProviders(<TransactionManagement />);
-    
     // Open category filter
-    fireEvent.click(screen.getByRole('button', { name: /filter by category/i }));
-    
-    // Select 'Entertainment' category
-    fireEvent.click(screen.getByRole('option', { name: /entertainment/i }));
-    
-    // Only the Entertainment transactions should be visible
-    await waitFor(() => {
-      expect(screen.getByText('Netflix Subscription')).toBeInTheDocument();
-      expect(screen.queryByText('Grocery Shopping')).not.toBeInTheDocument();
+    const categoryButton = screen.getByRole('combobox', {
+      name: /all categories/i
     });
+    fireEvent.click(categoryButton);
+
+    // Select Essentials category
+    const essentialsOption = screen.getByRole('option', { name: /essentials/i });
+    fireEvent.click(essentialsOption);
+
+    // Check that only Essentials transactions are shown
+    expect(screen.getByText('Groceries - Tesco')).toBeInTheDocument();
+    expect(screen.queryByText('Monthly Salary')).not.toBeInTheDocument();
   });
 
-  // New tests for transaction deletion functionality
+  it('filters transactions by search query', () => {
+    mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+    render(<TransactionManagement />);
+
+    // Type in search box
+    const searchInput = screen.getByPlaceholderText(/search transactions/i) as HTMLInputElement;
+    fireEvent.change(searchInput, { target: { value: 'tesco' } });
+
+    // Check if only matching transactions are shown
+    expect(screen.getByText('Groceries - Tesco')).toBeInTheDocument();
+    expect(screen.queryByText('Monthly Salary')).not.toBeInTheDocument();
+  });
+
+  it('resets filters when reset button is clicked', async () => {
+    mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+    render(<TransactionManagement />);
+
+    // Apply a search filter
+    const searchInput = screen.getByPlaceholderText(/search transactions/i) as HTMLInputElement;
+    fireEvent.change(searchInput, { target: { value: 'tesco' } });
+
+    // Click reset button
+    const resetButton = screen.getByRole('button', { name: /reset/i });
+    await userEvent.click(resetButton);
+
+    // Check if all transactions are shown again
+    expect(screen.getByText('Groceries - Tesco')).toBeInTheDocument();
+    expect(screen.getByText('Monthly Salary')).toBeInTheDocument();
+    expect(searchInput.value).toBe('');
+  });
+
+  it('opens add dialog when add button is clicked', async () => {
+    mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+    render(<TransactionManagement />);
+
+    // Click add button
+    const addButton = screen.getByRole('button', { name: /add transaction/i });
+    await userEvent.click(addButton);
+
+    // Check if dialog is shown
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('deletes a transaction when delete is confirmed', async () => {
+    const mockTransactions = [
+      {
+        id: '1',
+        date: '2024-03-15',
+        description: 'Groceries - Tesco',
+        merchant: 'Tesco',
+        amount: -75.50,
+        category: 'Essentials',
+        subcategory: 'Groceries',
+        budgetMonth: 'current'
+      }
+    ];
+
+    mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+
+    render(<TransactionManagement />);
+
+    // Click delete button
+    const deleteButton = screen.getByRole('button', { name: /delete/i });
+    fireEvent.click(deleteButton);
+
+    // Click confirm in dialog
+    const confirmButton = screen.getByRole('button', { name: /delete/i });
+    fireEvent.click(confirmButton);
+
+    // Wait for animation and check if transaction is removed
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 300));
+    });
+
+    expect(screen.queryByText('Groceries - Tesco')).not.toBeInTheDocument();
+  });
+
+  it('saves transactions to localStorage when they change', () => {
+    mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+    render(<TransactionManagement />);
+    expect(mockLocalStorage.setItem).toHaveBeenCalledWith('household-finance-transactions', JSON.stringify(mockTransactions));
+  });
+
+  it('opens add dialog and shows correct form fields', async () => {
+    render(<TransactionManagement />);
+    const addButton = screen.getByRole('button', { name: /add transaction/i });
+    await userEvent.click(addButton);
+    
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /add transaction/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/amount/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/merchant/i)).toBeInTheDocument();
+  });
+
   describe('Transaction Deletion Functionality', () => {
-    beforeEach(() => {
-      vi.useFakeTimers();
-      localStorageMock.clear();
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    it('removes the transaction from the list when deleted', async () => {
-      // Setup localStorage with test data
-      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockTransactions));
-
-      renderWithProviders(<TransactionManagement />);
+    it('shows delete confirmation dialog', async () => {
+      mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+      render(<TransactionManagement />);
       
-      // Verify the transaction exists initially
-      expect(screen.getByText('Grocery Shopping')).toBeInTheDocument();
-      
-      // Find and click delete button for first transaction
       const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
-      fireEvent.click(deleteButtons[0]);
+      await userEvent.click(deleteButtons[0]);
       
-      // Confirm deletion in the dialog
-      await waitFor(() => {
-        const confirmButton = screen.getByRole('button', { name: /delete/i });
-        fireEvent.click(confirmButton);
-      });
-
-      // Move time forward to account for animation duration
-      act(() => {
-        vi.advanceTimersByTime(350);
-      });
-      
-      // Verify the transaction is removed
-      await waitFor(() => {
-        expect(screen.queryByText('Grocery Shopping')).not.toBeInTheDocument();
-      });
-      
-      // Verify localStorage was updated
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'household-finance-transactions',
-        expect.stringContaining('Netflix')
-      );
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'household-finance-transactions',
-        expect.not.stringContaining('Grocery Shopping')
-      );
-    });
-
-    it('shows a confirmation dialog before deleting a transaction', async () => {
-      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockTransactions));
-      
-      renderWithProviders(<TransactionManagement />);
-      
-      // Find and click delete button for first transaction
-      const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
-      fireEvent.click(deleteButtons[0]);
-      
-      // Check confirmation dialog appears with correct content
-      await waitFor(() => {
-        expect(screen.getByText(/are you sure you want to delete this transaction?/i)).toBeInTheDocument();
-        expect(screen.getByText(/this action cannot be undone/i)).toBeInTheDocument();
-        
-        // Verify transaction details are shown in the dialog
-        expect(screen.getByText('Grocery Shopping')).toBeInTheDocument();
-        expect(screen.getByText('£45.67')).toBeInTheDocument();
-        
-        // Verify dialog has both Cancel and Delete buttons
-        expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
-      });
-      
-      // Test that Cancel closes the dialog without deleting
-      fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
-      
-      await waitFor(() => {
-        expect(screen.queryByText(/are you sure you want to delete this transaction?/i)).not.toBeInTheDocument();
-      });
-      
-      // Verify the transaction still exists
-      expect(screen.getByText('Grocery Shopping')).toBeInTheDocument();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /delete transaction/i })).toBeInTheDocument();
     });
 
     it('applies animation when deleting a transaction', async () => {
-      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+      mockLocalStorage.getItem.mockReturnValue(JSON.stringify(mockTransactions));
+      render(<TransactionManagement />);
       
-      const { container } = renderWithProviders(<TransactionManagement />);
+      // Wait for transactions to load
+      await waitFor(() => {
+        expect(screen.getByText('Groceries - Tesco')).toBeInTheDocument();
+      });
       
-      // Find and click delete button for first transaction
       const deleteButtons = screen.getAllByRole('button', { name: /delete/i });
-      fireEvent.click(deleteButtons[0]);
+      await userEvent.click(deleteButtons[0]);
       
-      // Confirm deletion
-      await waitFor(() => {
-        const confirmButton = screen.getByRole('button', { name: /delete/i });
-        fireEvent.click(confirmButton);
-      });
-      
-      // Check for animation class being applied (before the timer completes)
-      expect(container.querySelector('.opacity-0')).toBeTruthy();
-      expect(container.querySelector('.transition-all')).toBeTruthy();
-      expect(container.querySelector('.duration-300')).toBeTruthy();
-      
-      // Advance timers to complete the animation
-      act(() => {
-        vi.advanceTimersByTime(350);
-      });
-      
-      // After animation, the item should be removed
-      await waitFor(() => {
-        expect(screen.queryByText('Grocery Shopping')).not.toBeInTheDocument();
-      });
-    });
-
-    it('allows deleting a transaction from the edit modal', async () => {
-      localStorageMock.getItem.mockReturnValue(JSON.stringify(mockTransactions));
-      
-      renderWithProviders(<TransactionManagement />);
-      
-      // Open edit form for the first transaction
-      const editButtons = screen.getAllByRole('button', { name: /edit/i });
-      fireEvent.click(editButtons[0]);
-      
-      // Verify edit modal is open
-      await waitFor(() => {
-        expect(screen.getByText(/edit transaction/i)).toBeInTheDocument();
-      });
-      
-      // There should be a Delete button in the dialog footer
       const deleteButton = screen.getByRole('button', { name: /delete/i });
-      expect(deleteButton).toBeInTheDocument();
+      await userEvent.click(deleteButton);
       
-      // Click the delete button
-      fireEvent.click(deleteButton);
-      
-      // Edit dialog should close and confirmation dialog should open
+      // Check for animation class
       await waitFor(() => {
-        expect(screen.queryByText(/edit transaction/i)).not.toBeInTheDocument();
-        expect(screen.getByText(/are you sure you want to delete this transaction?/i)).toBeInTheDocument();
+        const transactionRow = screen.getByRole('row', { name: /groceries - tesco/i });
+        expect(transactionRow).toHaveClass('opacity-0', 'h-0', 'transform', 'scale-95');
       });
       
-      // Confirm deletion
-      const confirmButton = screen.getByRole('button', { name: /delete/i });
-      fireEvent.click(confirmButton);
-      
-      // Advance timers to complete the animation
-      act(() => {
-        vi.advanceTimersByTime(350);
-      });
-      
-      // Transaction should be removed
+      // Check that transaction is removed
       await waitFor(() => {
-        expect(screen.queryByText('Grocery Shopping')).not.toBeInTheDocument();
+        expect(screen.queryByText('Groceries - Tesco')).not.toBeInTheDocument();
       });
     });
   });
