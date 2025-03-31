@@ -60,6 +60,12 @@ The Personal Finance Tracker is a full-stack web application designed to help us
 - Passport.js for authentication
 - Session-based authentication
 
+### Testing
+- Vitest for unit and integration tests
+- Testing Library for component testing
+- Custom test utilities for consistent test environments
+- Standardized mock implementations for predictable testing
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -145,10 +151,22 @@ Run the test suite with:
 npm test
 ```
 
+Run specific tests with:
+```bash
+npm test -- path/to/test/file
+```
+
 The project includes:
 - Unit tests for utilities and components
 - Integration tests for API endpoints
 - End-to-end tests for critical user flows
+
+### Testing Utilities
+
+The project includes robust testing utilities:
+- `renderWithProviders`: A custom render function that provides all necessary context providers
+- `setupMocks`: A utility to configure test mocks consistently
+- Custom test helpers for common testing operations
 
 ## 📝 License
 
@@ -161,3 +179,16 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Drizzle ORM](https://orm.drizzle.team/) for database operations
 - [Recharts](https://recharts.org/) for data visualization
 - [Supabase](https://supabase.com/) for the database and authentication services
+
+## 🚧 Current Development Status
+
+The project is currently in active development with the following status:
+
+- ✅ Core transaction management functionality
+- ✅ User authentication and authorization
+- ✅ Basic dashboard and reporting
+- ✅ Financial calculators for mortgages and pensions
+- ✅ Data visualization components
+- 🔄 API documentation in progress
+- 🔄 Testing improvements ongoing
+- 🔄 Advanced features in development
