@@ -10,3 +10,6 @@ expect.extend(matchers);
 afterEach(() => {
   cleanup();
 });
+
+// This file should import the setup file from client/src
+import './client/src/setupTests';

@@ -1,52 +1,41 @@
 import { renderHook, act } from '@testing-library/react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile, MOBILE_BREAKPOINT } from '@/hooks/use-mobile';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { setupMatchMediaMock } from '../../__mocks__/browserAPIs';
 
 describe('useIsMobile', () => {
-  // Store original window.matchMedia
-  let originalMatchMedia: typeof window.matchMedia;
+  // Clean up function for mock
+  let cleanupMock: () => void;
 
   beforeEach(() => {
-    // Store the original implementation before tests
-    originalMatchMedia = window.matchMedia;
-    
-    // Mock window.matchMedia function
-    window.matchMedia = vi.fn().mockImplementation((query) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(), // Deprecated
-      removeListener: vi.fn(), // Deprecated
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }));
+    // Set up mock with default state (non-mobile)
+    cleanupMock = setupMatchMediaMock(false);
   });
 
   afterEach(() => {
-    // Restore original function after tests
-    window.matchMedia = originalMatchMedia;
+    cleanupMock();
+    vi.clearAllMocks();
   });
 
   it('returns false for non-mobile screen by default', () => {
-    // Set the mock to return non-mobile (false)
+    // Set up mock to return false for matches
     window.matchMedia = vi.fn().mockImplementation(() => ({
       matches: false,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
-    } as MediaQueryList));
+    } as unknown as MediaQueryList));
 
     const { result } = renderHook(() => useIsMobile());
     expect(result.current).toBe(false);
   });
 
   it('returns true for mobile screen sizes', () => {
-    // Set the mock to return mobile (true)
+    // Set up mock to return true for matches 
     window.matchMedia = vi.fn().mockImplementation(() => ({
       matches: true,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
-    } as MediaQueryList));
+    } as unknown as MediaQueryList));
 
     const { result } = renderHook(() => useIsMobile());
     expect(result.current).toBe(true);
@@ -68,6 +57,12 @@ describe('useIsMobile', () => {
 
     window.matchMedia = vi.fn().mockImplementation(() => mediaQueryList);
 
+    // Also mock window.innerWidth for the onChange handler
+    Object.defineProperty(window, 'innerWidth', { 
+      value: MOBILE_BREAKPOINT + 100, // Desktop size
+      writable: true 
+    });
+
     const { result } = renderHook(() => useIsMobile());
     
     // Initial state should be false (non-mobile)
@@ -75,6 +70,9 @@ describe('useIsMobile', () => {
 
     // Simulate a screen resize to mobile
     act(() => {
+      // Update the inner width
+      Object.defineProperty(window, 'innerWidth', { value: MOBILE_BREAKPOINT - 100 });
+      
       // Update the matches value
       Object.defineProperty(mediaQueryList, 'matches', { value: true });
       
@@ -121,25 +119,31 @@ describe('useIsMobile', () => {
         matches: false,
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
-      } as MediaQueryList;
+      } as unknown as MediaQueryList;
     });
 
     // Default breakpoint
     renderHook(() => useIsMobile());
-    expect(lastQuery).toBe('(max-width: 768px)');
+    expect(lastQuery).toBe(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
     
     // Custom breakpoint
-    renderHook(() => useIsMobile(480));
-    expect(lastQuery).toBe('(max-width: 480px)');
+    const customBreakpoint = 480;
+    renderHook(() => useIsMobile(customBreakpoint));
+    expect(lastQuery).toBe(`(max-width: ${customBreakpoint - 1}px)`);
   });
 
   it('handles the case where matchMedia is not available', () => {
     // Simulate a browser without matchMedia support
-    window.matchMedia = undefined as any;
-    
+    const originalMatchMedia = window.matchMedia;
+    (window as any).matchMedia = undefined;
+
+    // Run the hook
     const { result } = renderHook(() => useIsMobile());
     
     // Should default to false when matchMedia is unavailable
     expect(result.current).toBe(false);
+
+    // Restore original
+    window.matchMedia = originalMatchMedia;
   });
 }); 
