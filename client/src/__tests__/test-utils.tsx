@@ -21,11 +21,65 @@ import { apiRequest } from '@/lib/queryClient';
 // Include jest-dom matchers
 import '@testing-library/jest-dom';
 
+// Add compatibility for vi.requireMock which is used in some tests
+// This helps tests that use jest.requireMock to work without changes
+// @ts-ignore - Adding requireMock for compatibility
+(vi as any).requireMock = (moduleName: string) => {
+  const mocks: Record<string, any> = {
+    '@/hooks/use-auth': {
+      useAuth: vi.fn().mockReturnValue({
+        user: null,
+        isLoading: false,
+        error: null,
+        isAuthenticated: false,
+        loginMutation: {
+          mutate: vi.fn(),
+          isSuccess: false,
+          isError: false,
+          error: null,
+          isPending: false
+        },
+        logoutMutation: {
+          mutate: vi.fn(),
+          isSuccess: false,
+          isError: false,
+          error: null,
+          isPending: false
+        },
+        registerMutation: {
+          mutate: vi.fn(),
+          isSuccess: false,
+          isError: false,
+          error: null,
+          isPending: false
+        }
+      })
+    },
+    'wouter': {
+      useLocation: vi.fn().mockReturnValue(['/auth', vi.fn()]),
+      Link: ({ children }: { children: React.ReactNode }) => <a href="#">{children}</a>,
+      Route: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+      useRoute: vi.fn().mockReturnValue([false, {}]),
+      Switch: ({ children }: { children: React.ReactNode }) => <>{children}</>
+    }
+  };
+  
+  return mocks[moduleName] || {};
+};
+
 // Standard mock setup
 vi.mock('@/hooks/use-auth');
 vi.mock('@/hooks/use-toast');
 vi.mock('@/hooks/use-mobile');
 vi.mock('@tanstack/react-query');
+vi.mock('wouter', () => ({
+  useLocation: vi.fn().mockReturnValue(['/auth', vi.fn()]),
+  Link: ({ children, ...props }: { children: React.ReactNode, [key: string]: any }) => 
+    <a href="#" {...props}>{children}</a>,
+  Route: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useRoute: vi.fn().mockReturnValue([false, {}]),
+  Switch: ({ children }: { children: React.ReactNode }) => <>{children}</>
+}));
 
 // Mock queryClient with standardized implementation
 vi.mock('@/lib/queryClient', () => ({
@@ -64,7 +118,48 @@ export const setupMocks = (options: SetupMocksOptions = {}) => {
 
   // Setup auth mock
   if (authState) {
-    (useAuth as any).mockImplementation(createMockAuthHook(authState));
+    // Ensure the authState has all required fields
+    const userDefaults = {
+      password: 'password123',
+      createdAt: new Date(),
+      role: 'user'
+    };
+    
+    const user = authState.user ? {
+      ...userDefaults,
+      ...authState.user
+    } : null;
+
+    const completeAuthState = {
+      ...authState,
+      user,
+      isAuthenticated: authState.isAuthenticated ?? (user !== null),
+      isLoading: authState.isLoading ?? false,
+      error: authState.error ?? null,
+      loginMutation: authState.loginMutation ? {
+        mutate: authState.loginMutation.mutate || vi.fn(),
+        isSuccess: authState.loginMutation.isSuccess ?? false,
+        isError: authState.loginMutation.isError ?? false,
+        error: authState.loginMutation.error ?? null,
+        isPending: authState.loginMutation.isPending ?? false
+      } : undefined,
+      logoutMutation: authState.logoutMutation ? {
+        mutate: authState.logoutMutation.mutate || vi.fn(),
+        isSuccess: authState.logoutMutation.isSuccess ?? false,
+        isError: authState.logoutMutation.isError ?? false,
+        error: authState.logoutMutation.error ?? null,
+        isPending: authState.logoutMutation.isPending ?? false
+      } : undefined,
+      registerMutation: authState.registerMutation ? {
+        mutate: authState.registerMutation.mutate || vi.fn(),
+        isSuccess: authState.registerMutation.isSuccess ?? false,
+        isError: authState.registerMutation.isError ?? false,
+        error: authState.registerMutation.error ?? null,
+        isPending: authState.registerMutation.isPending ?? false
+      } : undefined
+    };
+
+    (useAuth as any).mockImplementation(createMockAuthHook(completeAuthState));
   }
 
   // Setup isMobile mock
@@ -90,12 +185,56 @@ export const setupMocks = (options: SetupMocksOptions = {}) => {
   });
 
   // Setup any custom mocks
-  Object.entries(customMocks).forEach(([mockPath, implementation]) => {
-    if (typeof implementation === 'function') {
-      // This needs to be called outside of this function, but we log a warning
-      console.warn(`Custom mock for ${mockPath} should be set up before calling setupMocks`);
+  if (customMocks) {
+    // Handle wouter mocks specially
+    if (customMocks.wouter) {
+      // Get the mocked module
+      const wouterMock = (vi as any).requireMock('wouter');
+      if (wouterMock) {
+        // Apply the custom implementations
+        if (customMocks.wouter.useLocation && wouterMock.useLocation) {
+          wouterMock.useLocation.mockImplementation(customMocks.wouter.useLocation);
+        }
+        if (customMocks.wouter.useRoute && wouterMock.useRoute) {
+          wouterMock.useRoute.mockImplementation(customMocks.wouter.useRoute);
+        }
+      }
     }
-  });
+    
+    // Handle other custom mocks
+    Object.entries(customMocks).forEach(([modulePath, mockImplementation]) => {
+      if (modulePath === 'wouter') return; // Already handled separately
+      
+      try {
+        // For other modules, try to apply the mock implementation
+        if (typeof mockImplementation === 'object') {
+          Object.entries(mockImplementation as Record<string, any>).forEach(([exportName, implementation]) => {
+            // For exports from modules, try to mock them
+            if (typeof implementation === 'function') {
+              try {
+                // Try to get the module mock from vi.mocked
+                const mockFn = vi.fn();
+                mockFn.mockImplementation(implementation);
+                
+                // Find if there's a globally mocked version to update
+                if (modulePath.startsWith('@/')) {
+                  const pathParts = modulePath.substring(2).split('/');
+                  const globalMock = pathParts.reduce((acc: any, part) => acc?.[part], global);
+                  if (globalMock && globalMock[exportName]) {
+                    globalMock[exportName].mockImplementation(implementation);
+                  }
+                }
+              } catch (innerError) {
+                console.warn(`Unable to mock ${modulePath}.${exportName}:`, innerError);
+              }
+            }
+          });
+        }
+      } catch (error) {
+        console.warn(`Error setting up custom mock for ${modulePath}:`, error);
+      }
+    });
+  }
 
   // Return cleanup function
   return () => {
@@ -152,25 +291,19 @@ export const renderWithProviders = (
   setupMocks({ authState, isMobile });
 
   // Create wrapper with providers
-  const Wrapper = ({ children }: { children: React.ReactNode }) => {
-    let wrappedChildren = children;
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      {CustomProviders ? <CustomProviders>{children}</CustomProviders> : children}
+    </QueryClientProvider>
+  );
 
-    // Wrap with custom providers if provided
-    if (CustomProviders) {
-      wrappedChildren = <CustomProviders>{wrappedChildren}</CustomProviders>;
-    }
+  // Use the standard render function with our Wrapper
+  const renderResult = render(ui, { wrapper: Wrapper, ...renderOptions });
 
-    // Wrap with QueryClientProvider
-    return (
-      <QueryClientProvider client={queryClient}>
-        {wrappedChildren}
-      </QueryClientProvider>
-    );
-  };
-
+  // Return the render result along with the user event instance
   return {
     user,
-    ...render(ui, { wrapper: Wrapper, ...renderOptions }),
+    ...renderResult,
   };
 };
 

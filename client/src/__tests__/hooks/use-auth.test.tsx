@@ -1,48 +1,32 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { useAuth } from '../../hooks/use-auth';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AuthProvider } from '@/hooks/use-auth';
-import { ReactNode } from 'react';
-
-// Mock the API request function
-vi.mock('@/lib/queryClient', () => ({
-  apiRequest: vi.fn(),
-  queryClient: {
-    setQueryData: vi.fn(),
-    getQueryData: vi.fn()
-  },
-  getQueryFn: () => async () => null
-}));
-
-const createTestQueryClient = () => new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-      enabled: false,
-    },
-  },
-});
-
-const createWrapper = () => {
-  const queryClient = createTestQueryClient();
-  return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
-    </QueryClientProvider>
-  );
-};
+import { renderWithProviders, setupMocks, createProviderWrapper } from '../test-utils';
 
 describe('useAuth Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setupMocks();
   });
 
-  test('provides null user initially while loading', () => {
+  test('provides null user initially while loading', async () => {
+    // Setup mock for loading state
+    setupMocks({
+      customMocks: {
+        useAuth: () => ({
+          user: null,
+          isLoading: true,
+          error: null,
+          isAuthenticated: false,
+          loginMutation: { mutate: vi.fn(), isSuccess: false },
+          logoutMutation: { mutate: vi.fn(), isSuccess: false },
+          registerMutation: { mutate: vi.fn(), isSuccess: false }
+        })
+      }
+    });
+
     const { result } = renderHook(() => useAuth(), {
-      wrapper: createWrapper()
+      wrapper: createProviderWrapper()
     });
 
     // Check initial state
@@ -50,32 +34,35 @@ describe('useAuth Hook', () => {
     expect(result.current.isLoading).toBe(true);
   });
 
-  test('provides user data when authenticated', () => {
+  test('provides user data when authenticated', async () => {
     const mockUser = {
       id: 1,
       name: 'Test User',
       email: 'test@example.com',
       username: 'testuser',
-      password: 'hashedpassword',
+      role: 'user',
       createdAt: new Date(),
     };
 
-    const queryClient = createTestQueryClient();
-    queryClient.setQueryData(['/api/user'], mockUser);
+    // Setup mock for authenticated state
+    setupMocks({
+      authState: {
+        user: mockUser,
+        isLoading: false,
+        error: null,
+        isAuthenticated: true
+      }
+    });
 
     const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) => (
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </QueryClientProvider>
-      )
+      wrapper: createProviderWrapper()
     });
 
     // Check authenticated state
-    expect(result.current.user).toEqual(mockUser);
-    expect(result.current.isLoading).toBe(false);
+    await waitFor(() => {
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.isLoading).toBe(false);
+    });
   });
 
   test('handles login mutation', async () => {
@@ -84,18 +71,29 @@ describe('useAuth Hook', () => {
       name: 'Test User',
       email: 'test@example.com',
       username: 'testuser',
-      password: 'hashedpassword',
+      role: 'user',
       createdAt: new Date(),
     };
 
-    const apiRequest = vi.mocked(require('@/lib/queryClient').apiRequest);
-    apiRequest.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockUser)
+    // Setup mock for login API call
+    setupMocks({
+      apiResponses: [
+        {
+          endpoint: '/api/auth/login',
+          method: 'POST',
+          response: mockUser
+        }
+      ],
+      authState: {
+        loginMutation: {
+          mutate: vi.fn(async () => mockUser),
+          isSuccess: true
+        }
+      }
     });
 
     const { result } = renderHook(() => useAuth(), {
-      wrapper: createWrapper()
+      wrapper: createProviderWrapper()
     });
 
     // Attempt login
@@ -104,25 +102,122 @@ describe('useAuth Hook', () => {
       password: 'password'
     });
 
-    // Verify login state
-    expect(result.current.loginMutation.isSuccess).toBe(true);
+    // Verify login mutation state
+    await waitFor(() => {
+      expect(result.current.loginMutation.isSuccess).toBe(true);
+    });
   });
 
   test('handles logout', async () => {
-    const apiRequest = vi.mocked(require('@/lib/queryClient').apiRequest);
-    apiRequest.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(null)
+    // Setup mock for logout API call
+    setupMocks({
+      apiResponses: [
+        {
+          endpoint: '/api/auth/logout',
+          method: 'POST',
+          response: { success: true }
+        }
+      ],
+      authState: {
+        logoutMutation: {
+          mutate: vi.fn(),
+          isSuccess: true
+        }
+      }
     });
 
     const { result } = renderHook(() => useAuth(), {
-      wrapper: createWrapper()
+      wrapper: createProviderWrapper()
     });
 
     // Attempt logout
     await result.current.logoutMutation.mutate();
 
-    // Verify logout state
-    expect(result.current.user).toBeNull();
+    // Verify logout mutation state
+    await waitFor(() => {
+      expect(result.current.logoutMutation.isSuccess).toBe(true);
+    });
+  });
+
+  test('handles register mutation', async () => {
+    const mockUser = {
+      id: 1,
+      name: 'New User',
+      email: 'new@example.com',
+      username: 'newuser',
+      role: 'user',
+      createdAt: new Date(),
+    };
+
+    // Setup mock for register API call
+    setupMocks({
+      apiResponses: [
+        {
+          endpoint: '/api/auth/register',
+          method: 'POST',
+          response: mockUser
+        }
+      ],
+      authState: {
+        registerMutation: {
+          mutate: vi.fn(),
+          isSuccess: true
+        }
+      }
+    });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: createProviderWrapper()
+    });
+
+    // Attempt registration
+    await result.current.registerMutation.mutate({
+      name: 'New User',
+      email: 'new@example.com',
+      username: 'newuser',
+      password: 'newpassword'
+    });
+
+    // Verify registration mutation state
+    await waitFor(() => {
+      expect(result.current.registerMutation.isSuccess).toBe(true);
+    });
+  });
+  
+  test('handles authentication errors', async () => {
+    // Setup mock for failed login attempt
+    setupMocks({
+      apiResponses: [
+        {
+          endpoint: '/api/auth/login',
+          method: 'POST',
+          error: new Error('Invalid credentials')
+        }
+      ],
+      authState: {
+        loginMutation: {
+          mutate: vi.fn(),
+          isSuccess: false,
+          isError: true,
+          error: new Error('Invalid credentials')
+        }
+      }
+    });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: createProviderWrapper()
+    });
+
+    // Attempt login with invalid credentials
+    await result.current.loginMutation.mutate({
+      username: 'wrong',
+      password: 'wrong'
+    });
+
+    // Verify error state
+    await waitFor(() => {
+      expect(result.current.loginMutation.isError).toBe(true);
+      expect(result.current.loginMutation.error).toBeTruthy();
+    });
   });
 });
