@@ -15,18 +15,23 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 )
 ```
-Stores user account information.
+Stores user account information. The `password` field is used for legacy authentication during the migration period, and will eventually be phased out as all users migrate to Supabase Auth.
 
 ### Auth Mapping
 ```sql
 CREATE TABLE IF NOT EXISTS auth_mapping (
   id SERIAL PRIMARY KEY,
   auth_id UUID NOT NULL UNIQUE,
-  user_id INTEGER NOT NULL REFERENCES public.users(id),
+  user_id INTEGER NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 )
 ```
-Maps Supabase Auth users to application users.
+Maps Supabase Auth users to application users. This table plays a crucial role in the authentication system:
+- `auth_id`: The UUID of the user in Supabase Auth
+- `user_id`: The ID of the user in our application's users table
+- Creates a one-to-one relationship between Supabase Auth users and application users
+- Enables a smooth transition from session-based auth to JWT-based auth
+- Allows preserving user data during the authentication migration
 
 ## Financial Data Tables
 
@@ -150,16 +155,31 @@ CREATE TABLE IF NOT EXISTS "session" (
   CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
 )
 ```
-Manages user sessions with connect-pg-simple.
+Manages user sessions with connect-pg-simple. This table is used for legacy session-based authentication during the migration period and will eventually be phased out.
 
 ## Row Level Security (RLS)
 
 The database implements Row Level Security policies to ensure data privacy:
 
 - Each table has RLS enabled
-- Users can only access their own data
+- Users can only access their own data through Supabase Auth policies
 - Shared access allows controlled data sharing between household members
 - Auth mapping connects Supabase Auth with application users
+
+### Example RLS Policies
+
+For the transactions table:
+```sql
+-- Users can only view their own transactions
+CREATE POLICY "Users can view own transactions" 
+ON public.transactions FOR SELECT 
+USING (user_id IN (SELECT user_id FROM auth_mapping WHERE auth_id = auth.uid()));
+
+-- Users can only insert transactions linked to their user ID
+CREATE POLICY "Users can create own transactions" 
+ON public.transactions FOR INSERT 
+WITH CHECK (user_id IN (SELECT user_id FROM auth_mapping WHERE auth_id = auth.uid()));
+```
 
 ## Entity Relationships
 
@@ -167,11 +187,41 @@ The database implements Row Level Security policies to ensure data privacy:
 - Shared access creates relationships between household members
 - All financial data has user_id as a foreign key to the users table
 - Cascading deletes ensure referential integrity
+- Auth mapping provides the bridge between Supabase Auth and application users
 
 ## Database Migrations
 
-Database schema is managed through migrations, which are applied when the application starts up or when schema changes are deployed.
+Database schema is managed through migrations, which are applied when the application starts up or when schema changes are deployed. The application has two migration systems:
+
+1. **SQL Migrations**: Applied through the `run-migrations.ts` script
+2. **Supabase Auth Migrations**: Applied through the `supabase-migrations.ts` script
 
 ## Authentication
 
-Supabase Auth is used for authentication, with a custom auth_mapping table to connect Supabase Auth users with application users.
+The application uses a dual authentication system during the migration period:
+
+1. **Supabase Auth**: JWT-based authentication is the primary and recommended method
+   - Uses Supabase Auth for user management
+   - Implements JWT token verification
+   - Maps Supabase Auth users to application users via the auth_mapping table
+
+2. **Legacy Session Auth**: Session-based authentication for backward compatibility
+   - Uses Passport.js with local strategy
+   - Stores sessions in the database
+   - Will be phased out once all users migrate to Supabase Auth
+
+### User Migration Process
+
+The application includes a migration script (`migrate-users-to-supabase.ts`) to:
+1. Create Supabase Auth users for existing application users
+2. Create mappings in the auth_mapping table
+3. Send password reset emails to users for setting up their new credentials
+4. Maintain backward compatibility through the dual-auth system
+
+### Auth Flow
+
+1. User authenticates with Supabase Auth
+2. JWT token is verified on API requests
+3. Auth mapping middleware maps the Supabase user to an application user
+4. Request proceeds with the mapped user ID
+5. Row Level Security ensures data privacy

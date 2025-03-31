@@ -7,7 +7,8 @@ import {
   investments, type Investment, type InsertInvestment,
   sharedAccess, type SharedAccess, type InsertSharedAccess,
   invitations, type Invitation, type InsertInvitation,
-  transactions, type Transaction, type InsertTransaction
+  transactions, type Transaction, type InsertTransaction,
+  authMapping, type AuthMapping, type InsertAuthMapping
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -24,6 +25,12 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserWithPassword(id: number): Promise<User | undefined>;
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
+  
+  // Auth Mapping methods for Supabase integration
+  getAuthMappingByAuthId(authId: string): Promise<AuthMapping | undefined>;
+  getAuthMappingByUserId(userId: number): Promise<AuthMapping | undefined>;
+  createAuthMapping(mapping: InsertAuthMapping): Promise<AuthMapping>;
+  deleteAuthMapping(id: number): Promise<boolean>;
   
   // Shared Access methods
   getSharedAccesses(userId: number): Promise<SharedAccess[]>;
@@ -209,6 +216,27 @@ export class MemStorage implements IStorage {
     const updatedUser = { ...user, ...updates };
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+  
+  // Auth Mapping methods for Supabase integration
+  async getAuthMappingByAuthId(authId: string): Promise<AuthMapping | undefined> {
+    // Implementation needed
+    throw new Error('Method not implemented');
+  }
+  
+  async getAuthMappingByUserId(userId: number): Promise<AuthMapping | undefined> {
+    // Implementation needed
+    throw new Error('Method not implemented');
+  }
+  
+  async createAuthMapping(mapping: InsertAuthMapping): Promise<AuthMapping> {
+    // Implementation needed
+    throw new Error('Method not implemented');
+  }
+  
+  async deleteAuthMapping(id: number): Promise<boolean> {
+    // Implementation needed
+    throw new Error('Method not implemented');
   }
   
   // Shared Access methods

@@ -5,9 +5,8 @@ on:
     branches: [ main, master ]
 
 jobs:
-  deploy-staging:
+  test-and-build:
     runs-on: ubuntu-latest
-    environment: staging
     
     services:
       postgres:
@@ -48,22 +47,25 @@ jobs:
       run: npm run build
       env:
         NODE_ENV: production
-
-    - name: Setup Sentry CLI
-      uses: getsentry/action-setup-cli@v1.2.0
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
       with:
-        version: latest
-      env:
-        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        name: build-output
+        path: dist/
 
-    - name: Upload source maps to Sentry
-      run: npm run sentry:sourcemaps
-      env:
-        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+  deploy-staging:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: build-output
+        path: dist/
 
     - name: Deploy to staging
       run: |
@@ -73,6 +75,9 @@ jobs:
         DEPLOY_URL: ${{ secrets.STAGING_DEPLOY_URL }}
         DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         SESSION_SECRET: ${{ secrets.STAGING_SESSION_SECRET }}
+        VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
 
     - name: Install k6
       run: |
@@ -92,42 +97,15 @@ jobs:
   deploy-production:
     needs: deploy-staging
     runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: ${{ steps.deploy.outputs.url }}
     
     steps:
     - uses: actions/checkout@v3
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
       with:
-        node-version: '18'
-        cache: 'npm'
-
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Build
-      run: npm run build
-      env:
-        NODE_ENV: production
-
-    - name: Setup Sentry CLI
-      uses: getsentry/action-setup-cli@v1.2.0
-      with:
-        version: latest
-      env:
-        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-
-    - name: Upload source maps to Sentry
-      run: npm run sentry:sourcemaps
-      env:
-        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        name: build-output
+        path: dist/
 
     - name: Run database migrations
       run: npm run db:migrate
@@ -135,15 +113,16 @@ jobs:
         DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
 
     - name: Deploy to production
-      id: deploy
       run: |
         # Add deployment script here
         echo "Deploying to production..."
-        echo "url=https://your-production-url.com" >> $GITHUB_OUTPUT
       env:
         DEPLOY_URL: ${{ secrets.PROD_DEPLOY_URL }}
         DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
         SESSION_SECRET: ${{ secrets.PROD_SESSION_SECRET }}
+        VITE_SUPABASE_URL: ${{ secrets.PROD_SUPABASE_URL }}
+        VITE_SUPABASE_ANON_KEY: ${{ secrets.PROD_SUPABASE_ANON_KEY }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PROD_SUPABASE_SERVICE_ROLE_KEY }}
 
     - name: Verify deployment
       run: |

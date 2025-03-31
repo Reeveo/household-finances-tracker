@@ -51,14 +51,14 @@ The Personal Finance Tracker is a full-stack web application designed to help us
 - React Hook Form for form management
 - Shadcn UI components with Tailwind CSS
 - Recharts for data visualization
-- Wouter for routing
+- React Router for client-side routing
 
 ### Backend
 - Node.js with Express
-- PostgreSQL database via Supabase
+- PostgreSQL database
+- Supabase for authentication and storage
 - Drizzle ORM with Zod validation
-- Passport.js for authentication
-- Session-based authentication
+- JWT-based authentication with Supabase Auth
 
 ### Testing
 - Vitest for unit and integration tests
@@ -96,8 +96,9 @@ This will start a local Supabase instance using Docker. The output will show the
 Create a `.env` file in the root directory with the following variables (use the values from the Supabase CLI output):
 ```
 DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:<PORT>/postgres
-SUPABASE_URL=http://127.0.0.1:<PORT>
-SUPABASE_ANON_KEY=<ANON_KEY_FROM_OUTPUT>
+VITE_SUPABASE_URL=http://127.0.0.1:<PORT>
+VITE_SUPABASE_ANON_KEY=<ANON_KEY_FROM_OUTPUT>
+SUPABASE_SERVICE_ROLE_KEY=<SERVICE_ROLE_KEY_FROM_OUTPUT>
 SESSION_SECRET=your_secret_key_here
 ```
 
@@ -111,7 +112,7 @@ npm run db:push
 npm run dev
 ```
 
-7. Visit `http://localhost:5000` to use the application
+7. Visit `http://localhost:3000` to use the application
 
 8. When you're done, you can stop the local Supabase instance with:
 ```bash
@@ -123,6 +124,7 @@ npx supabase stop
 The application uses the following core data entities:
 
 - **Users**: Account information and authentication details
+- **Auth Mapping**: Maps Supabase Auth users to application users
 - **Transactions**: Financial transactions with categories and metadata
 - **Budgets**: Monthly budget targets by category
 - **Savings Goals**: Target amounts with deadlines and tracking
@@ -131,11 +133,12 @@ The application uses the following core data entities:
 
 ## 🔒 Security Features
 
-- Secure password hashing using scrypt
-- Session-based authentication
-- CSRF protection
+- JWT-based authentication with Supabase Auth
+- Secure password management through Supabase
+- Row Level Security (RLS) with Supabase policies
 - Input validation with Zod schemas
 - Permission-based access control
+- Secure user migration strategy
 
 ## 📱 Responsive Design
 
@@ -179,16 +182,19 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Drizzle ORM](https://orm.drizzle.team/) for database operations
 - [Recharts](https://recharts.org/) for data visualization
 - [Supabase](https://supabase.com/) for the database and authentication services
+- [React Router](https://reactrouter.com/) for client-side routing
 
 ## 🚧 Current Development Status
 
 The project is currently in active development with the following status:
 
 - ✅ Core transaction management functionality
-- ✅ User authentication and authorization
+- ✅ User authentication and authorization with Supabase
 - ✅ Basic dashboard and reporting
 - ✅ Financial calculators for mortgages and pensions
 - ✅ Data visualization components
+- ✅ JWT-based authentication with Supabase Auth
+- ✅ Dual-auth system for migration from session-based to JWT authentication
 - 🔄 API documentation in progress
 - 🔄 Testing improvements ongoing
 - 🔄 Advanced features in development

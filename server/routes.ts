@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, comparePasswords, hashPassword } from "./auth";
+import { requireAuth, createUserProfile } from "./supabase-auth";
 import { z } from "zod";
 import { 
   insertIncomeSchema, 
@@ -12,16 +13,83 @@ import {
   insertSharedAccessSchema,
   insertInvitationSchema,
   insertTransactionSchema,
-  insertUserSchema
+  insertUserSchema,
+  insertAuthMappingSchema
 } from "@shared/schema";
 import crypto from "crypto";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication routes
+  // Setup authentication routes (legacy - will be deprecated)
   setupAuth(app);
 
-  // Authentication and authorization middleware
-  function requireAuth(req: any, res: any, next: any) {
+  // New Supabase Auth API endpoints
+  
+  // Get user profile using JWT token
+  app.get("/api/user/profile", requireAuth, (req, res) => {
+    // User is already attached to request by requireAuth middleware
+    const { password, ...userWithoutPassword } = req.user!;
+    res.json(userWithoutPassword);
+  });
+  
+  // Create user profile (used during registration)
+  app.post("/api/user/create-profile", async (req, res) => {
+    try {
+      // Extract auth_id from the request body
+      const { auth_id, ...userData } = req.body;
+      
+      if (!auth_id) {
+        return res.status(400).json({ message: "auth_id is required" });
+      }
+      
+      // Validate user data
+      const validatedData = insertUserSchema.parse(userData);
+      
+      // Create user profile
+      const user = await createUserProfile(auth_id, validatedData);
+      
+      // Don't return the password
+      const { password, ...userWithoutPassword } = user;
+      
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ errors: error.errors });
+      } else {
+        console.error("Error creating user profile:", error);
+        res.status(500).json({ message: "Server error" });
+      }
+    }
+  });
+  
+  // Update user profile
+  app.patch("/api/user/profile", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const updates = { ...req.body };
+      
+      // Don't allow password updates through this endpoint
+      if ('password' in updates) {
+        delete updates.password;
+      }
+      
+      const updatedUser = await storage.updateUser(userId, updates);
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Don't return the password
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Original auth middleware - Will be replaced with JWT verification 
+  function requireLegacyAuth(req: any, res: any, next: any) {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Authentication required" });
     }
@@ -656,65 +724,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/transactions", requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const targetUserId = parseInt(req.query.userId as string) || userId;
-      
-      // If requesting someone else's data, check shared access
-      if (targetUserId !== userId) {
-        const access = await hasAccessToUserData(userId, targetUserId);
-        if (!access.hasAccess) {
-          return res.status(403).json({ error: "Not authorized to view this user's data" });
-        }
-      }
-      
-      // Handle optional date range parameters
-      if (req.query.startDate && req.query.endDate) {
-        try {
-          const startDate = new Date(req.query.startDate as string);
-          const endDate = new Date(req.query.endDate as string);
-          
-          // Validate date format
-          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            return res.status(400).json({ error: "Invalid date format" });
-          }
-          
-          const transactions = await storage.getTransactionsByDateRange(targetUserId, startDate, endDate);
-          return res.json(transactions);
-        } catch (dateError) {
-          return res.status(400).json({ error: "Invalid date format" });
-        }
-      }
-      
-      // Handle budget month filter
-      if (req.query.month && req.query.year) {
-        try {
-          const month = parseInt(req.query.month as string, 10);
-          const year = parseInt(req.query.year as string, 10);
-          
-          // Validate month and year
-          if (isNaN(month) || month < 1 || month > 12 || isNaN(year)) {
-            return res.status(400).json({ error: "Invalid budget month" });
-          }
-          
-          const transactions = await storage.getTransactionsByBudgetMonth(targetUserId, month, year);
-          return res.json(transactions);
-        } catch (monthError) {
-          return res.status(400).json({ error: "Invalid budget month" });
-        }
-      }
-      
-      // Handle category filter
-      if (req.query.category) {
-        const category = req.query.category as string;
-        const transactions = await storage.getTransactionsByCategory(targetUserId, category);
-        return res.json(transactions);
-      }
-      
-      // Default: get all transactions
-      const transactions = await storage.getTransactions(targetUserId);
+      const transactions = await storage.getTransactions(userId);
       res.json(transactions);
     } catch (error) {
       console.error("Error fetching transactions:", error);
-      res.status(500).json({ error: "Server error while fetching transactions" });
+      res.status(500).json({ message: "Server error" });
     }
   });
 
@@ -757,53 +771,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const transactionData = { ...req.body, userId };
       
-      // Manual validation before passing to Zod
-      if (!transactionData.description) {
-        return res.status(400).json({ error: "description is required" });
-      }
+      // Validate transaction data
+      const validatedData = insertTransactionSchema.parse(transactionData);
       
-      if (!transactionData.category) {
-        return res.status(400).json({ error: "category is required" });
-      }
+      // Create transaction
+      const transaction = await storage.createTransaction(validatedData);
       
-      if (!transactionData.date || isNaN(new Date(transactionData.date).getTime())) {
-        return res.status(400).json({ error: "invalid date format" });
-      }
-      
-      if (!transactionData.amount || isNaN(Number(transactionData.amount))) {
-        return res.status(400).json({ error: "invalid amount" });
-      }
-      
-      if (!transactionData.type || (transactionData.type !== 'income' && transactionData.type !== 'expense')) {
-        return res.status(400).json({ error: "invalid transaction type" });
-      }
-      
-      // Now try Zod validation
-      try {
-        const validatedData = insertTransactionSchema.parse(transactionData);
-        
-        // Check for duplicates by import hash if provided
-        if (validatedData.importHash) {
-          const existingTransaction = await storage.getTransactionByImportHash(validatedData.importHash);
-          if (existingTransaction) {
-            return res.status(409).json({ 
-              error: "Transaction with this import hash already exists",
-              existingTransaction
-            });
-          }
-        }
-        
-        const transaction = await storage.createTransaction(validatedData);
-        res.status(201).json(transaction);
-      } catch (zodError) {
-        if (zodError instanceof z.ZodError) {
-          return res.status(400).json({ error: zodError.errors[0].message });
-        }
-        throw zodError; // re-throw other errors to be caught by the outer catch
-      }
+      res.status(201).json(transaction);
     } catch (error) {
-      console.error("Error creating transaction:", error);
-      res.status(500).json({ error: "Error creating transaction" });
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ errors: error.errors });
+      } else {
+        console.error("Error creating transaction:", error);
+        res.status(500).json({ message: "Server error" });
+      }
     }
   });
 

@@ -3,6 +3,9 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { testConnection } from "./db";
 import { createTables } from "./db-migrations";
+import { runMigrations } from "./run-migrations";
+import { runSupabaseAuthMigrations } from "./supabase-migrations";
+import { setupAuth } from "./auth";
 import 'dotenv/config';
 
 const app = express();
@@ -45,10 +48,20 @@ app.use((req, res, next) => {
   if (dbConnected) {
     // Create tables if they don't exist
     await createTables();
+    
+    // Run SQL migrations
+    await runMigrations();
+    
+    // Run Supabase Auth migrations
+    await runSupabaseAuthMigrations();
+    
     log("Database initialized successfully");
   } else {
     log("Warning: Database connection failed, falling back to in-memory storage");
   }
+
+  // Setup authentication
+  setupAuth(app);
 
   const server = await registerRoutes(app);
 

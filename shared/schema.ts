@@ -170,9 +170,25 @@ export const insertInvestmentSchema = createInsertSchema(investments).pick({
   notes: true,
 });
 
+// Auth mapping for Supabase integration
+export const authMapping = pgTable("auth_mapping", {
+  id: serial("id").primaryKey(),
+  authId: text("auth_id").notNull().unique(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertAuthMappingSchema = createInsertSchema(authMapping).pick({
+  authId: true,
+  userId: true,
+});
+
 // Export types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type AuthMapping = typeof authMapping.$inferSelect;
+export type InsertAuthMapping = z.infer<typeof insertAuthMappingSchema>;
 
 export type SharedAccess = typeof sharedAccess.$inferSelect;
 export type InsertSharedAccess = z.infer<typeof insertSharedAccessSchema>;
