@@ -154,6 +154,39 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
     const createdAt = new Date();
+    
+    // Validate username is not empty
+    if (!insertUser.username || insertUser.username.trim() === '') {
+      throw new Error('Username cannot be empty');
+    }
+    
+    // Validate password is not empty
+    if (!insertUser.password || insertUser.password.trim() === '') {
+      throw new Error('Password cannot be empty');
+    }
+    
+    // Validate email format if provided
+    if (insertUser.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(insertUser.email)) {
+        throw new Error('Invalid email format');
+      }
+    }
+    
+    // Check for duplicate username
+    const existingUserWithUsername = await this.getUserByUsername(insertUser.username);
+    if (existingUserWithUsername) {
+      throw new Error('Username already exists');
+    }
+    
+    // Check for duplicate email if provided
+    if (insertUser.email) {
+      const existingUserWithEmail = await this.getUserByEmail(insertUser.email);
+      if (existingUserWithEmail) {
+        throw new Error('Email already exists');
+      }
+    }
+    
     const user: User = { ...insertUser, id, createdAt };
     this.users.set(id, user);
     return user;
@@ -425,9 +458,66 @@ export class MemStorage implements IStorage {
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
     const id = this.currentTransactionId++;
     const createdAt = new Date();
+    
+    // Validate user exists
+    const user = await this.getUser(insertTransaction.userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    // Validate date format
+    if (insertTransaction.date && !this.isValidDateFormat(insertTransaction.date)) {
+      throw new Error('Invalid date format');
+    }
+    
+    // Validate required fields
+    if (!insertTransaction.description || insertTransaction.description.trim() === '') {
+      throw new Error('Description is required');
+    }
+    
+    if (!insertTransaction.category || insertTransaction.category.trim() === '') {
+      throw new Error('Category is required');
+    }
+    
+    // Validate amount
+    if (isNaN(Number(insertTransaction.amount))) {
+      throw new Error('Invalid amount');
+    }
+    
+    // Validate transaction type
+    if (insertTransaction.type !== 'income' && insertTransaction.type !== 'expense') {
+      throw new Error('Invalid transaction type');
+    }
+    
+    // Validate recurring transaction data
+    if (insertTransaction.isRecurring) {
+      // Validate frequency if provided
+      if (insertTransaction.frequency) {
+        const validFrequencies = ['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'annually'];
+        if (!validFrequencies.includes(insertTransaction.frequency)) {
+          throw new Error('Invalid frequency');
+        }
+      }
+      
+      // Validate next due date if provided
+      if (insertTransaction.nextDueDate && !this.isValidDateFormat(insertTransaction.nextDueDate)) {
+        throw new Error('Invalid next due date');
+      }
+    }
+    
     const transaction: Transaction = { ...insertTransaction, id, createdAt };
     this.transactions.set(id, transaction);
     return transaction;
+  }
+  
+  // Helper method to validate date format (YYYY-MM-DD)
+  private isValidDateFormat(dateString: string): boolean {
+    const regex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!regex.test(dateString)) return false;
+    
+    // Check if it's a valid date
+    const date = new Date(dateString);
+    return !isNaN(date.getTime());
   }
   
   async createManyTransactions(insertTransactions: InsertTransaction[]): Promise<Transaction[]> {

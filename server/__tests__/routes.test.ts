@@ -40,6 +40,10 @@ vi.mock('../auth', () => ({
     // Mock authentication middleware for testing
     app.use((req, res, next) => {
       // For testing, we'll manually set req.user when needed
+      // Add isAuthenticated method to request object
+      req.isAuthenticated = () => {
+        return !!req.user; // Return true if req.user exists
+      };
       next();
     });
   })
@@ -60,6 +64,18 @@ describe('API Routes', () => {
     // Configure mock auth
     setupAuth(app);
     
+    // Add middleware to set user from header for testing
+    app.use((req, res, next) => {
+      if (req.headers.user) {
+        try {
+          req.user = JSON.parse(req.headers.user as string);
+        } catch (e) {
+          console.error('Invalid user header format');
+        }
+      }
+      next();
+    });
+    
     // Register routes
     server = await registerRoutes(app);
   });
@@ -79,7 +95,7 @@ describe('API Routes', () => {
           amount: '100.00',
           category: 'Income',
           date: '2023-06-15',
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         },
         {
           id: 2,
@@ -88,7 +104,7 @@ describe('API Routes', () => {
           amount: '-50.00',
           category: 'Essentials',
           date: '2023-06-16',
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         }
       ];
       
@@ -116,7 +132,7 @@ describe('API Routes', () => {
           amount: '-50.00',
           category: 'Essentials',
           date: '2023-02-01',
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         }
       ];
       
@@ -156,7 +172,7 @@ describe('API Routes', () => {
         category: 'Income',
         date: '2023-06-15',
         type: 'income',
-        createdAt: new Date()
+        createdAt: new Date().toISOString()
       };
       
       // Mock storage implementation
@@ -207,7 +223,7 @@ describe('API Routes', () => {
         hasEndDate: false,
         endDate: null,
         nextDueDate: '2023-07-15',
-        createdAt: new Date()
+        createdAt: new Date().toISOString()
       };
       
       // Mock storage implementation
@@ -258,7 +274,7 @@ describe('API Routes', () => {
         hasEndDate: true,
         endDate: '2023-12-15',
         nextDueDate: '2023-07-15',
-        createdAt: new Date()
+        createdAt: new Date().toISOString()
       };
       
       // Mock storage implementation
@@ -307,7 +323,7 @@ describe('API Routes', () => {
           category: 'Income',
           date: '2023-06-15',
           type: 'income',
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         },
         {
           id: 2,
@@ -317,7 +333,7 @@ describe('API Routes', () => {
           category: 'Essentials',
           date: '2023-06-16',
           type: 'expense',
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         }
       ];
       
@@ -388,7 +404,7 @@ describe('API Routes', () => {
           hasEndDate: false,
           endDate: null,
           nextDueDate: '2023-07-15',
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         },
         {
           id: 2,
@@ -404,7 +420,7 @@ describe('API Routes', () => {
           hasEndDate: true,
           endDate: '2023-12-20',
           nextDueDate: '2023-07-20',
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         }
       ];
       
@@ -441,18 +457,37 @@ describe('API Routes', () => {
     });
     
     it('PATCH /api/transactions/:id updates a recurring transaction', async () => {
-      // Mock transaction data
+      // Mock data
       const transactionId = 123;
+      
+      // Mock original transaction
+      vi.mocked(storage.getTransactionById).mockReturnValue(Promise.resolve({
+        id: transactionId,
+        userId: 1,
+        description: 'Original Subscription',
+        amount: '-15.99',
+        category: 'Lifestyle',
+        date: '2023-06-15',
+        type: 'expense',
+        isRecurring: true,
+        frequency: 'monthly',
+        hasEndDate: false,
+        endDate: null,
+        nextDueDate: '2023-07-15',
+        createdAt: new Date()
+      } as any));
+      
+      // Mock update data
       const mockTransactionUpdate = {
         description: 'Updated Subscription',
         amount: '-20.99',
-        isRecurring: true,
         frequency: 'quarterly',
         hasEndDate: true,
         endDate: '2024-06-15',
         nextDueDate: '2023-09-15'
       };
       
+      // Mock updated transaction
       const mockUpdatedTransaction = {
         id: transactionId,
         userId: 1,
@@ -466,14 +501,8 @@ describe('API Routes', () => {
         hasEndDate: true,
         endDate: '2024-06-15',
         nextDueDate: '2023-09-15',
-        createdAt: new Date()
+        createdAt: new Date().toISOString()
       };
-      
-      // Mock transaction to verify ownership
-      storage.getTransactionById.mockResolvedValue({
-        id: transactionId,
-        userId: 1
-      });
       
       // Mock storage implementation
       storage.updateTransaction.mockResolvedValue(mockUpdatedTransaction);
@@ -491,15 +520,32 @@ describe('API Routes', () => {
     });
     
     it('PATCH /api/transactions/:id converts a regular transaction to recurring', async () => {
-      // Mock transaction data
+      // Mock data
       const transactionId = 123;
+      
+      // Mock original transaction
+      vi.mocked(storage.getTransactionById).mockReturnValue(Promise.resolve({
+        id: transactionId,
+        userId: 1,
+        description: 'Regular Transaction',
+        amount: '-50.00',
+        category: 'Essentials',
+        date: '2023-06-15',
+        type: 'expense',
+        isRecurring: false,
+        createdAt: new Date()
+      } as any));
+      
+      // Mock update data
       const mockTransactionUpdate = {
         isRecurring: true,
         frequency: 'monthly',
         hasEndDate: false,
+        endDate: null,
         nextDueDate: '2023-07-15'
       };
       
+      // Mock updated transaction
       const mockUpdatedTransaction = {
         id: transactionId,
         userId: 1,
@@ -513,14 +559,8 @@ describe('API Routes', () => {
         hasEndDate: false,
         endDate: null,
         nextDueDate: '2023-07-15',
-        createdAt: new Date()
+        createdAt: new Date().toISOString()
       };
-      
-      // Mock transaction to verify ownership
-      storage.getTransactionById.mockResolvedValue({
-        id: transactionId,
-        userId: 1
-      });
       
       // Mock storage implementation
       storage.updateTransaction.mockResolvedValue(mockUpdatedTransaction);
@@ -538,13 +578,33 @@ describe('API Routes', () => {
     });
     
     it('PATCH /api/transactions/:id changes recurring settings from indefinite to end-dated', async () => {
-      // Mock transaction data
+      // Mock data
       const transactionId = 123;
+      
+      // Mock original transaction
+      vi.mocked(storage.getTransactionById).mockReturnValue(Promise.resolve({
+        id: transactionId,
+        userId: 1,
+        description: 'Subscription',
+        amount: '-15.99',
+        category: 'Lifestyle',
+        date: '2023-06-15',
+        type: 'expense',
+        isRecurring: true,
+        frequency: 'monthly',
+        hasEndDate: false,
+        endDate: null,
+        nextDueDate: '2023-07-15',
+        createdAt: new Date()
+      } as any));
+      
+      // Mock update data
       const mockTransactionUpdate = {
         hasEndDate: true,
         endDate: '2023-12-15'
       };
       
+      // Mock updated transaction
       const mockUpdatedTransaction = {
         id: transactionId,
         userId: 1,
@@ -558,14 +618,8 @@ describe('API Routes', () => {
         hasEndDate: true,
         endDate: '2023-12-15',
         nextDueDate: '2023-07-15',
-        createdAt: new Date()
+        createdAt: new Date().toISOString()
       };
-      
-      // Mock transaction to verify ownership
-      storage.getTransactionById.mockResolvedValue({
-        id: transactionId,
-        userId: 1
-      });
       
       // Mock storage implementation
       storage.updateTransaction.mockResolvedValue(mockUpdatedTransaction);
