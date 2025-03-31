@@ -1449,6 +1449,7 @@ export function CSVImport() {
               className="hidden"
               onChange={handleFileUpload}
               disabled={isUploading}
+              data-testid="csv-upload"
             />
           </div>
         </div>
