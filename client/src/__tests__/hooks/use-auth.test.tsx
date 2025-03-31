@@ -11,7 +11,8 @@ vi.mock('@/lib/queryClient', () => ({
   queryClient: {
     setQueryData: vi.fn(),
     getQueryData: vi.fn()
-  }
+  },
+  getQueryFn: () => async () => null
 }));
 
 const createTestQueryClient = () => new QueryClient({
@@ -87,8 +88,8 @@ describe('useAuth Hook', () => {
       createdAt: new Date(),
     };
 
-    const { apiRequest } = require('@/lib/queryClient');
-    (apiRequest as any).mockResolvedValueOnce({
+    const apiRequest = vi.mocked(require('@/lib/queryClient').apiRequest);
+    apiRequest.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockUser)
     });
@@ -108,8 +109,8 @@ describe('useAuth Hook', () => {
   });
 
   test('handles logout', async () => {
-    const { apiRequest } = require('@/lib/queryClient');
-    (apiRequest as any).mockResolvedValueOnce({
+    const apiRequest = vi.mocked(require('@/lib/queryClient').apiRequest);
+    apiRequest.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(null)
     });
