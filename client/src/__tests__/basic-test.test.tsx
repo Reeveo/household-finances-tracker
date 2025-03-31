@@ -1,13 +1,15 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { expect, describe, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import '@testing-library/jest-dom';
 
-// Simple component with no dependencies
-function SimpleComponent() {
+// Define a simple component for testing
+const SimpleComponent = () => {
   return <div data-testid="simple">Hello World</div>;
-}
+};
 
-describe('Basic Rendering', () => {
+// Directly use render without any wrappers
+describe('Basic Testing', () => {
   it('renders a simple component', () => {
     render(<SimpleComponent />);
     

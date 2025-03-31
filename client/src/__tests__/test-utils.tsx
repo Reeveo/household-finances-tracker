@@ -290,20 +290,32 @@ export const renderWithProviders = (
   // Set up mocks
   setupMocks({ authState, isMobile });
 
-  // Create wrapper with providers
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      {CustomProviders ? <CustomProviders>{children}</CustomProviders> : children}
-    </QueryClientProvider>
-  );
+  // Define wrapper component - keep it simple and consistent
+  const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    // First apply custom providers if needed
+    let content = children;
+    if (CustomProviders) {
+      content = <CustomProviders>{content}</CustomProviders>;
+    }
+    
+    // Then wrap with query client provider
+    return (
+      <QueryClientProvider client={queryClient}>
+        {content}
+      </QueryClientProvider>
+    );
+  };
 
-  // Use the standard render function with our Wrapper
-  const renderResult = render(ui, { wrapper: Wrapper, ...renderOptions });
+  // Render with our wrapper
+  const renderResult = render(ui, { 
+    wrapper: Wrapper,
+    ...renderOptions
+  });
 
-  // Return the render result along with the user event instance
+  // Return with user events
   return {
-    user,
     ...renderResult,
+    user,
   };
 };
 
