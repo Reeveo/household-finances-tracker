@@ -41,7 +41,7 @@ export function setupAuth(app: Express) {
   // Configure session middleware
   const sessionSettings: session.SessionOptions = {
     store: sessionStore,
-    secret: process.env.SESSION_SECRET || "personal-finance-tracker-secret", // Keep existing secret logic
+    secret: process.env.SESSION_SECRET as string, // Rely solely on the environment variable
     resave: false,
     saveUninitialized: false,
     cookie: {
