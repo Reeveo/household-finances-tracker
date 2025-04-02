@@ -8,6 +8,7 @@ import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import { createClient } from '@supabase/supabase-js';
 import { mapAuthUser } from './auth-mapping';
+import { ENV } from './config';
 
 // Define different types of users to handle the dual auth system
 type DatabaseUser = {
@@ -47,11 +48,13 @@ declare global {
 
 const scryptAsync = promisify(scrypt);
 
+// Debug environment variables
+console.log("Auth.ts - Loading environment variables:");
+console.log("SUPABASE_URL:", ENV.SUPABASE_URL);
+console.log("SUPABASE_ANON_KEY:", ENV.SUPABASE_ANON_KEY ? "Found (not empty)" : "Not found or empty");
+
 // Initialize Supabase client
-const supabase = createClient(
-  process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321',
-  process.env.VITE_SUPABASE_ANON_KEY || ''
-);
+const supabase = createClient(ENV.SUPABASE_URL, ENV.SUPABASE_ANON_KEY);
 
 export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
@@ -96,6 +99,11 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 export function setupAuth(app: Express) {
+  // Check if session secret is properly set
+  if (!process.env.SESSION_SECRET) {
+    console.error('WARNING: SESSION_SECRET environment variable is not set. Using an insecure default value. Set SESSION_SECRET in your .env file for better security.');
+  }
+  
   // Maintain session auth for backward compatibility during migration
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "personal-finance-tracker-secret",

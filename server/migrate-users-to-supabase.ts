@@ -4,6 +4,14 @@ import { comparePasswords } from './auth';
 import { pool } from './db';
 import 'dotenv/config';
 
+// Debug environment variables
+console.log("migrate-users-to-supabase.ts - Loading environment variables:");
+console.log("VITE_SUPABASE_URL:", process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321');
+console.log("SUPABASE_SERVICE_ROLE_KEY:", process.env.SUPABASE_SERVICE_ROLE_KEY ? "Found (not empty)" : "Not found or empty");
+
+// Define a secure default password for migration (This should be set in .env file)
+const DEFAULT_MIGRATION_PASSWORD = process.env.DEFAULT_MIGRATION_PASSWORD || 'ChangeMe!123';
+
 // Initialize Supabase admin client
 const supabaseAdmin = createClient(
   process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321',
@@ -59,7 +67,7 @@ async function migrateUsersToSupabase() {
         // Option 1: Create user with admin privileges (will set password)
         const { data: supabaseUser, error } = await supabaseAdmin.auth.admin.createUser({
           email: user.email || `${user.username}@example.com`,
-          password: 'TemporaryPassword123!', // Temporary password
+          password: DEFAULT_MIGRATION_PASSWORD, // Use the environment variable
           email_confirm: true,
         });
         

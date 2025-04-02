@@ -2,10 +2,21 @@ import { createClient } from '@supabase/supabase-js';
 import { Request, Response, NextFunction } from 'express';
 import { storage } from './storage';
 
+// More detailed debug logging
+console.log("--- Reading Supabase Environment Variables ---");
+const supabaseUrl = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'; // Use SUPABASE_URL (no VITE_)
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const anonKey = process.env.SUPABASE_ANON_KEY || ''; // Also read anon key, often needed
+console.log(`SUPABASE_URL read as: ${supabaseUrl}`);
+console.log(`SUPABASE_SERVICE_ROLE_KEY read as: ${serviceRoleKey ? 'SET (length: ' + serviceRoleKey.length + ')' : 'NOT SET or empty'}`);
+console.log(`SUPABASE_ANON_KEY read as: ${anonKey ? 'SET (length: ' + anonKey.length + ')' : 'NOT SET or empty'}`);
+console.log("--- Finished Reading Supabase Environment Variables ---");
+
+
 // Initialize Supabase client with admin privileges (service role)
 const supabaseAdmin = createClient(
-  process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+  supabaseUrl,
+  serviceRoleKey,
   {
     auth: {
       autoRefreshToken: false,
