@@ -13,10 +13,10 @@ CREATE TABLE IF NOT EXISTS auth_mapping (
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 
 -- Users can see all profiles (needed for UI displays)
-CREATE POLICY "Users can view all profiles" 
-ON public.users FOR SELECT 
+CREATE POLICY "Users can view own profile" -- Renamed for clarity
+ON public.users FOR SELECT
 TO authenticated
-USING (true);
+USING (id IN (SELECT user_id FROM auth_mapping WHERE auth_id = auth.uid())); -- Restrict to own user ID via mapping
 
 -- Users can only update their own profiles via the mapping
 CREATE POLICY "Users can update own profile" 
