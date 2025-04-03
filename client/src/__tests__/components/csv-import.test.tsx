@@ -1,187 +1,121 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { vi, describe, it, beforeEach, afterEach, expect } from 'vitest';
-import { CSVImport } from '../../components/income-expense/csv-import';
-import { AuthProvider } from '@/hooks/use-auth';
+import { screen, waitFor } from '@testing-library/react';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { CSVImport } from '@/components/income-expense/csv-import';
+import { renderWithProviders, setupMocks } from '../test-utils';
 
-// Mock the API request function
-vi.mock('@/lib/api-request', () => ({
-  apiRequest: vi.fn()
-}));
-
-// Mock scrollIntoView
-Element.prototype.scrollIntoView = vi.fn();
-
-const csvContent = `Date,Type,Sort Code,Account Number,Description,Debit,Credit,Balance
-01/01/2024,DD,123456,12345678,Test Transaction 1,,100.00,1100.00
-02/01/2024,FPI,123456,12345678,Test Transaction 2,50.00,,1050.00`;
-
-describe('CSVImport Component', () => {
-  let queryClient: QueryClient;
-
-  // Mock FileReader
-  const mockFileReader = {
-    readAsText: vi.fn(),
-    result: csvContent,
-    onload: null as ((this: FileReader, ev: ProgressEvent<FileReader>) => void) | null,
-    onerror: null as ((this: FileReader, ev: ProgressEvent<FileReader>) => void) | null,
-    EMPTY: 0,
-    LOADING: 1,
-    DONE: 2,
-    readyState: 0,
-    error: null as Error | null,
-    abort: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn()
-  };
-
+describe('CSVImport', () => {
+  let mockFileReader: any;
+  
   beforeEach(() => {
-    queryClient = new QueryClient();
+    vi.resetAllMocks();
     
-    // Mock FileReader implementation
-    global.FileReader = vi.fn(() => mockFileReader) as unknown as typeof FileReader;
+    // Set up standard mocks
+    setupMocks({
+      authState: {
+        user: {
+          id: 1,
+          name: 'Test User',
+          email: 'test@example.com',
+          username: 'testuser',
+          password: 'password123',
+          createdAt: new Date(),
+          role: 'user'
+        }
+      },
+      // Mock API responses for bank formats
+      apiResponses: [
+        {
+          endpoint: '/api/bank-formats',
+          method: 'GET',
+          response: [
+            { id: 1, name: 'Chase Bank', code: 'chase' },
+            { id: 2, name: 'Bank of America', code: 'bofa' },
+            { id: 3, name: 'Wells Fargo', code: 'wellsfargo' },
+            { id: 4, name: 'Custom Format', code: 'custom' }
+          ]
+        }
+      ]
+    });
+    
+    // Mock FileReader
+    mockFileReader = {
+      readAsText: vi.fn(),
+      onload: null,
+      onerror: null,
+      result: null
+    };
+    
+    // @ts-ignore - we need to mock the FileReader constructor
+    global.FileReader = vi.fn(() => mockFileReader);
   });
 
-  afterEach(() => {
-    queryClient.clear();
-    vi.clearAllMocks();
-  });
-
-  const renderComponent = () => {
-    return render(
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <CSVImport />
-        </AuthProvider>
-      </QueryClientProvider>
-    );
-  };
-
-  it('renders the CSV import form', () => {
-    renderComponent();
-    expect(screen.getByText('Import Bank Transactions')).toBeInTheDocument();
+  it('renders the upload interface', async () => {
+    const { user } = renderWithProviders(<CSVImport />);
+    
+    // Check that the title is rendered
     expect(screen.getByText('Upload Bank Statement CSV')).toBeInTheDocument();
+    
+    // Check that supported formats section is shown
+    expect(screen.getByText('Supported Bank Formats')).toBeInTheDocument();
+    
+    // Check for bank format options
+    await waitFor(() => {
+      expect(screen.getByText('Chase Bank')).toBeInTheDocument();
+      expect(screen.getByText('Bank of America')).toBeInTheDocument();
+      expect(screen.getByText('Wells Fargo')).toBeInTheDocument();
+      expect(screen.getByText('Custom Format')).toBeInTheDocument();
+    });
+    
+    // Upload button should be present
+    expect(screen.getByRole('button', { name: /select csv file/i })).toBeInTheDocument();
   });
-
-  it('handles file upload and column mapping', async () => {
-    renderComponent();
-
-    // Get the file input
-    const fileInput = screen.getByTestId('csv-upload');
+  
+  it('handles file selection', async () => {
+    const { user } = renderWithProviders(<CSVImport />);
     
-    // Create a CSV file
-    const file = new File([csvContent], 'test.csv', { type: 'text/csv' });
+    // Get file input and upload button
+    const uploadButton = screen.getByRole('button', { name: /select csv file/i });
     
-    // Trigger file upload
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-
-      // Simulate FileReader onload
-      if (mockFileReader.onload) {
-        mockFileReader.onload.call(mockFileReader as unknown as FileReader, {
-          target: { result: csvContent }
-        } as unknown as ProgressEvent<FileReader>);
-      }
-    });
-
-    // Wait for the mapping step to appear and for the component to be ready
+    // Create a test file
+    const testFile = new File(['date,description,amount\n2023-01-01,Test Transaction,100.00'], 'test.csv', { type: 'text/csv' });
+    
+    // Click the upload button
+    await user.click(uploadButton);
+    
+    // Simulate file selection
+    // This is a bit tricky in testing as the file input is often hidden
+    const fileInput = screen.getByTestId('csv-file-input');
+    await user.upload(fileInput, testFile);
+    
+    // Trigger the FileReader onload event
+    mockFileReader.result = 'date,description,amount\n2023-01-01,Test Transaction,100.00';
+    mockFileReader.onload && mockFileReader.onload({ target: mockFileReader } as any);
+    
+    // After file is processed, we should move to the mapping step
     await waitFor(() => {
-      expect(screen.getByText('Column Mapping')).toBeInTheDocument();
-    });
-
-    // Select bank format
-    await act(async () => {
-      const bankFormatSelect = screen.getByRole('combobox');
-      fireEvent.click(bankFormatSelect);
-      
-      // Wait for the select content to appear
-      await waitFor(() => {
-        expect(screen.getByText('Standard UK Bank Format')).toBeInTheDocument();
-      });
-      
-      // Click the option
-      fireEvent.click(screen.getByText('Standard UK Bank Format'));
-    });
-
-    // Wait for the component to update after bank format selection
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    });
-
-    // Debug: Log all buttons in the document
-    const allButtons = screen.getAllByRole('button', { hidden: true });
-    console.log('Available buttons:', allButtons.map(button => button.textContent));
-
-    // Wait for the Process Transactions button to be available
-    await waitFor(() => {
-      const processButton = screen.getByText('Process Transactions');
-      expect(processButton).toBeInTheDocument();
-      expect(processButton.closest('button')).not.toBeDisabled();
-    });
-
-    // Click Process Transactions to proceed to preview
-    await act(async () => {
-      const processButton = screen.getByText('Process Transactions');
-      fireEvent.click(processButton.closest('button')!);
-    });
-
-    // Wait for preview step
-    await waitFor(() => {
-      expect(screen.getByText('3. Review & Import')).toBeInTheDocument();
-      const importButton = screen.getByRole('button', { name: /^Import \d* Transactions$/i });
-      expect(importButton).toBeInTheDocument();
-      expect(importButton).not.toBeDisabled();
-    });
-
-    // Click Import to confirm
-    await act(async () => {
-      const importButton = screen.getByRole('button', { name: /^Import \d* Transactions$/i });
-      fireEvent.click(importButton);
-    });
-
-    // Wait for success message
-    await waitFor(() => {
-      expect(screen.getByText('Transactions processed successfully')).toBeInTheDocument();
-      expect(screen.getByText('2 transactions found. Review and categorize before importing.')).toBeInTheDocument();
+      expect(screen.getByText(/map columns/i)).toBeInTheDocument();
     });
   });
-
-  it('handles import cancellation', async () => {
-    renderComponent();
-
-    // Get the file input
-    const fileInput = screen.getByTestId('csv-upload');
+  
+  it('shows error when non-CSV file is selected', async () => {
+    const { user } = renderWithProviders(<CSVImport />);
     
-    // Create a CSV file
-    const file = new File([csvContent], 'test.csv', { type: 'text/csv' });
+    // Get file input and upload button
+    const uploadButton = screen.getByRole('button', { name: /select csv file/i });
     
-    // Trigger file upload
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-
-      // Simulate FileReader onload
-      if (mockFileReader.onload) {
-        mockFileReader.onload.call(mockFileReader as unknown as FileReader, {
-          target: { result: csvContent }
-        } as unknown as ProgressEvent<FileReader>);
-      }
-    });
-
-    // Wait for the mapping step to appear
+    // Create a test file with wrong type
+    const testFile = new File(['not a csv'], 'test.txt', { type: 'text/plain' });
+    
+    // Click the upload button
+    await user.click(uploadButton);
+    
+    // Simulate file selection with wrong file type
+    const fileInput = screen.getByTestId('csv-file-input');
+    await user.upload(fileInput, testFile);
+    
+    // Should show error message
     await waitFor(() => {
-      expect(screen.getByText('Column Mapping')).toBeInTheDocument();
-    });
-
-    // Click Back to cancel
-    await act(async () => {
-      const backButton = screen.getByRole('button', { name: /Back/i });
-      fireEvent.click(backButton);
-    });
-
-    // Verify we're back at the upload step
-    await waitFor(() => {
-      expect(screen.getByText('Upload Bank Statement CSV')).toBeInTheDocument();
+      expect(screen.getByText(/please select a csv file/i)).toBeInTheDocument();
     });
   });
 });

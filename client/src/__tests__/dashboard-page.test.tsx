@@ -5,6 +5,7 @@ import DashboardPage from '../pages/dashboard-page';
 import { useAuth } from '@/hooks/use-auth';
 import { useQuery } from '@tanstack/react-query';
 import { renderWithProviders } from './test-utils';
+import { describe, it, expect } from 'vitest';
 
 // Mock the hooks
 vi.mock('@/hooks/use-auth', () => ({
@@ -45,6 +46,11 @@ vi.mock('@/components/layout/sidebar', () => ({
 vi.mock('@/components/layout/header', () => ({
   Header: () => <div data-testid="header">Header</div>,
 }));
+
+// Create a simplified rendering function that doesn't rely on providers
+const renderWithoutProviders = (ui: React.ReactElement) => {
+  return render(ui);
+};
 
 describe('DashboardPage', () => {
   const mockUser = { 
@@ -275,5 +281,18 @@ describe('DashboardPage', () => {
     
     // Should call refetch
     expect(mockRefetch).toHaveBeenCalled();
+  });
+
+  it('renders the dashboard page', () => {
+    renderWithoutProviders(<DashboardPage />);
+    
+    // Check for sidebar
+    expect(screen.getByTestId('sidebar')).toBeInTheDocument();
+    
+    // Check for page title
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    
+    // Check for welcome message with user name
+    expect(screen.getByText(/Welcome back/i)).toBeInTheDocument();
   });
 }); 

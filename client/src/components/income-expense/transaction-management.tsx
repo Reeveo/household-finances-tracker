@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   Card, 
   CardContent, 
@@ -49,7 +49,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CalendarIcon, Search, Plus, Filter, RefreshCcw, Edit, Calendar, CheckSquare } from "lucide-react";
+import { CalendarIcon, Search, Plus, Filter, RefreshCcw, Edit, Calendar, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -252,14 +252,9 @@ type Transaction = {
   notes: string;
 };
 
-// Add this type definition after other types
-interface BulkEditFormValues {
-  category?: string;
-  subcategory?: string;
-  budgetMonth?: string;
-  isRecurring?: boolean;
-  frequency?: string;
-}
+// Add CSS for animation
+const fadeOutAnimation = "opacity-0 h-0 transition-all duration-300 transform scale-95";
+const normalRow = "hover:bg-muted/50 transition-all duration-300";
 
 export function TransactionManagement() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -267,10 +262,27 @@ export function TransactionManagement() {
   const [monthFilter, setMonthFilter] = useState("All");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [bulkEditMode, setBulkEditMode] = useState(false);
-  const [selectedTransactions, setSelectedTransactions] = useState<number[]>([]);
-  const [localTransactions, setLocalTransactions] = useState<Transaction[]>(transactions);
-  const [showBulkEditDialog, setShowBulkEditDialog] = useState(false);
+  const [localTransactions, setLocalTransactions] = useState<Transaction[]>([]);
+  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [animatingDeleteId, setAnimatingDeleteId] = useState<number | null>(null);
+
+  // Load transactions from localStorage on component mount
+  useEffect(() => {
+    const savedTransactions = localStorage.getItem('household-finance-transactions');
+    if (savedTransactions) {
+      setLocalTransactions(JSON.parse(savedTransactions));
+    } else {
+      setLocalTransactions(transactions);
+    }
+  }, []);
+
+  // Save transactions to localStorage whenever they change
+  useEffect(() => {
+    if (localTransactions.length > 0) {
+      localStorage.setItem('household-finance-transactions', JSON.stringify(localTransactions));
+    }
+  }, [localTransactions]);
 
   // Form for adding/editing transactions
   const form = useForm<TransactionFormValues>({
@@ -413,87 +425,30 @@ export function TransactionManagement() {
   // Get isMobile from useIsMobile hook
   const isMobileState = useIsMobile();
 
-  const toggleTransactionSelection = (id: number) => {
-    setSelectedTransactions(prev => 
-      prev.includes(id) 
-        ? prev.filter(transId => transId !== id)
-        : [...prev, id]
-    );
+  // Handle delete transaction
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    setDeletingTransaction(transaction);
+    setShowDeleteDialog(true);
   };
-
-  const toggleAllTransactions = () => {
-    if (selectedTransactions.length === filteredTransactions.length) {
-      setSelectedTransactions([]);
-    } else {
-      setSelectedTransactions(filteredTransactions.map(t => t.id));
-    }
-  };
-
-  // Add this near the filters section
-  const handleExitBulkEdit = () => {
-    setBulkEditMode(false);
-    setSelectedTransactions([]);
-  };
-
-  // Add this function to handle bulk updates
-  const handleBulkEdit = async (data: BulkEditFormValues) => {
-    try {
-      // Remove undefined values
-      const updates = Object.fromEntries(
-        Object.entries(data).filter(([_, v]) => v !== undefined)
-      );
+  
+  // Confirm delete transaction with animation
+  const confirmDelete = () => {
+    if (deletingTransaction) {
+      // Set the animating ID to trigger CSS transition
+      setAnimatingDeleteId(deletingTransaction.id);
       
-      if (Object.keys(updates).length === 0) {
-        return; // No fields to update
-      }
-
-      const response = await fetch('/api/transactions/bulk/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          transactions: selectedTransactions.map(id => ({
-            id,
-            ...updates
-          }))
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update transactions');
-      }
-
-      const result = await response.json();
+      // Close the dialog immediately
+      setShowDeleteDialog(false);
       
-      // Update local state with the changes
-      setLocalTransactions(prev => 
-        prev.map(t => {
-          if (selectedTransactions.includes(t.id)) {
-            return { ...t, ...updates };
-          }
-          return t;
-        })
-      );
-
-      // Close dialogs and reset selection
-      setShowBulkEditDialog(false);
-      handleExitBulkEdit();
-      
-      // Show success message
-      toast({
-        title: "Success",
-        description: `Updated ${result.updated.length} transactions${
-          result.failed.length > 0 ? `. ${result.failed.length} failed.` : ''
-        }`,
-      });
-    } catch (error) {
-      console.error('Bulk update error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update transactions. Please try again.",
-        variant: "destructive",
-      });
+      // Wait for animation to complete before removing from state
+      setTimeout(() => {
+        const updatedTransactions = localTransactions.filter(t => t.id !== deletingTransaction.id);
+        setLocalTransactions(updatedTransactions);
+        // Save to localStorage immediately after deletion
+        localStorage.setItem('household-finance-transactions', JSON.stringify(updatedTransactions));
+        setDeletingTransaction(null);
+        setAnimatingDeleteId(null);
+      }, 300); // Match this to the duration in CSS transition
     }
   };
 
@@ -640,26 +595,15 @@ export function TransactionManagement() {
                   <TableHead className="whitespace-nowrap w-[100px]">Category</TableHead>
                   <TableHead className="whitespace-nowrap w-[120px]">Budget Month</TableHead>
                   <TableHead className="whitespace-nowrap text-right w-[100px]">Amount</TableHead>
-                  <TableHead className="text-right w-[50px]">Actions</TableHead>
+                  <TableHead className="text-right w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTransactions.map((transaction) => (
                   <TableRow 
                     key={transaction.id} 
-                    className={cn(
-                      "hover:bg-muted/50",
-                      selectedTransactions.includes(transaction.id) && "bg-muted/30"
-                    )}
+                    className={`${animatingDeleteId === transaction.id ? fadeOutAnimation : normalRow}`}
                   >
-                    {bulkEditMode && (
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedTransactions.includes(transaction.id)}
-                          onCheckedChange={() => toggleTransactionSelection(transaction.id)}
-                        />
-                      </TableCell>
-                    )}
                     <TableCell className="whitespace-nowrap">
                       <div className="flex items-center">
                         <CalendarIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
@@ -705,15 +649,26 @@ export function TransactionManagement() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="h-8 w-8 p-0"
-                        onClick={() => handleEditTransaction(transaction)}
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
+                      <div className="flex justify-end space-x-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0"
+                          onClick={() => handleEditTransaction(transaction)}
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => handleDeleteTransaction(transaction)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -1096,6 +1051,22 @@ export function TransactionManagement() {
               />
               
               <DialogFooter>
+                {editingTransaction && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => {
+                      handleDialogChange(false);
+                      setDeletingTransaction(editingTransaction);
+                      setTimeout(() => {
+                        setShowDeleteDialog(true);
+                      }, 100);
+                    }}
+                    className="mr-auto"
+                  >
+                    Delete
+                  </Button>
+                )}
                 <Button type="submit">
                   {editingTransaction ? "Save Changes" : "Add Transaction"}
                 </Button>
@@ -1105,172 +1076,63 @@ export function TransactionManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Add this new dialog for bulk editing */}
-      <Dialog open={showBulkEditDialog} onOpenChange={setShowBulkEditDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowDeleteDialog(false);
+          setDeletingTransaction(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Bulk Edit Transactions</DialogTitle>
+            <DialogTitle>Delete Transaction</DialogTitle>
             <DialogDescription>
-              Update multiple transactions at once. Only changed fields will be updated.
+              Are you sure you want to delete this transaction? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-
-          <Form {...bulkEditForm}>
-            <form onSubmit={bulkEditForm.handleSubmit(handleBulkEdit)} className="space-y-4">
-              <FormField
-                control={bulkEditForm.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {CATEGORIES.map((category) => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={bulkEditForm.control}
-                name="subcategory"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subcategory</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      disabled={!bulkEditForm.watch("category")}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a subcategory" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(SUB_CATEGORIES[bulkEditForm.watch("category") || ""] || []).map(
-                          (subcategory) => (
-                            <SelectItem key={subcategory} value={subcategory}>
-                              {subcategory}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={bulkEditForm.control}
-                name="budgetMonth"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Budget Month</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select budget month" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {MONTHS.map((month) => (
-                          <SelectItem key={month.value} value={month.value}>
-                            {month.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={bulkEditForm.control}
-                name="isRecurring"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Recurring Transaction</FormLabel>
-                      <FormDescription>
-                        Mark these transactions as recurring
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
-
-              {bulkEditForm.watch("isRecurring") && (
-                <FormField
-                  control={bulkEditForm.control}
-                  name="frequency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Frequency</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select frequency" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {["Weekly", "Monthly", "Quarterly", "Yearly"].map(
-                            (freq) => (
-                              <SelectItem key={freq} value={freq}>
-                                {freq}
-                              </SelectItem>
-                            )
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowBulkEditDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Update {selectedTransactions.length} Transactions
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+          
+          {deletingTransaction && (
+            <div className="py-4 space-y-3">
+              <div className="flex justify-between items-center py-2 px-3 bg-muted/50 rounded-lg">
+                <span className="font-medium">{deletingTransaction.description}</span>
+                <span className={deletingTransaction.amount < 0 ? 'text-red-600' : 'text-green-600'}>
+                  {deletingTransaction.amount < 0 ? '-' : ''}£{Math.abs(deletingTransaction.amount).toFixed(2)}
+                </span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Date:</span>
+                  <span>{new Date(deletingTransaction.date).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Category:</span>
+                  <span>{deletingTransaction.subcategory}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Merchant:</span>
+                  <span>{deletingTransaction.merchant}</span>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setDeletingTransaction(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>

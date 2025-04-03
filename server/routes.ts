@@ -662,16 +662,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (targetUserId !== userId) {
         const access = await hasAccessToUserData(userId, targetUserId);
         if (!access.hasAccess) {
-          return res.status(403).json({ message: "Not authorized to view this user's data" });
+          return res.status(403).json({ error: "Not authorized to view this user's data" });
         }
       }
       
       // Handle optional date range parameters
       if (req.query.startDate && req.query.endDate) {
-        const startDate = new Date(req.query.startDate as string);
-        const endDate = new Date(req.query.endDate as string);
-        const transactions = await storage.getTransactionsByDateRange(targetUserId, startDate, endDate);
-        return res.json(transactions);
+        try {
+          const startDate = new Date(req.query.startDate as string);
+          const endDate = new Date(req.query.endDate as string);
+          
+          // Validate date format
+          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            return res.status(400).json({ error: "Invalid date format" });
+          }
+          
+          const transactions = await storage.getTransactionsByDateRange(targetUserId, startDate, endDate);
+          return res.json(transactions);
+        } catch (dateError) {
+          return res.status(400).json({ error: "Invalid date format" });
+        }
+      }
+      
+      // Handle budget month filter
+      if (req.query.month && req.query.year) {
+        try {
+          const month = parseInt(req.query.month as string, 10);
+          const year = parseInt(req.query.year as string, 10);
+          
+          // Validate month and year
+          if (isNaN(month) || month < 1 || month > 12 || isNaN(year)) {
+            return res.status(400).json({ error: "Invalid budget month" });
+          }
+          
+          const transactions = await storage.getTransactionsByBudgetMonth(targetUserId, month, year);
+          return res.json(transactions);
+        } catch (monthError) {
+          return res.status(400).json({ error: "Invalid budget month" });
+        }
       }
       
       // Handle category filter
@@ -681,20 +709,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(transactions);
       }
       
-      // Handle budget month filter
-      if (req.query.month && req.query.year) {
-        const month = parseInt(req.query.month as string, 10);
-        const year = parseInt(req.query.year as string, 10);
-        const transactions = await storage.getTransactionsByBudgetMonth(targetUserId, month, year);
-        return res.json(transactions);
-      }
-      
       // Default: get all transactions
       const transactions = await storage.getTransactions(targetUserId);
       res.json(transactions);
     } catch (error) {
       console.error("Error fetching transactions:", error);
-      res.status(500).json({ message: "Server error" });
+      res.status(500).json({ error: "Server error while fetching transactions" });
+    }
+  });
+
+  app.get("/api/transactions/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const transactionId = parseInt(req.params.id, 10);
+      
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ error: "Invalid transaction ID" });
+      }
+      
+      const transaction = await storage.getTransactionById(transactionId);
+      
+      if (!transaction) {
+        return res.status(404).json({ error: "Transaction not found" });
+      }
+      
+      // Check authorization
+      if (transaction.userId !== userId) {
+        const access = await hasAccessToUserData(userId, transaction.userId);
+        if (!access.hasAccess) {
+          return res.status(403).json({ error: "Not authorized to access this transaction" });
+        }
+      }
+      
+      // Sanitize the response by removing sensitive fields
+      const sanitizedTransaction = { ...transaction };
+      delete sanitizedTransaction.userId; // Remove userId field
+      
+      res.json(sanitizedTransaction);
+    } catch (error) {
+      console.error("Error fetching transaction:", error);
+      res.status(500).json({ error: "Server error while fetching transaction" });
     }
   });
 
@@ -702,28 +756,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user!.id;
       const transactionData = { ...req.body, userId };
-      const validatedData = insertTransactionSchema.parse(transactionData);
       
-      // Check for duplicates by import hash if provided
-      if (validatedData.importHash) {
-        const existingTransaction = await storage.getTransactionByImportHash(validatedData.importHash);
-        if (existingTransaction) {
-          return res.status(409).json({ 
-            message: "Transaction with this import hash already exists",
-            existingTransaction
-          });
+      // Manual validation before passing to Zod
+      if (!transactionData.description) {
+        return res.status(400).json({ error: "description is required" });
+      }
+      
+      if (!transactionData.category) {
+        return res.status(400).json({ error: "category is required" });
+      }
+      
+      if (!transactionData.date || isNaN(new Date(transactionData.date).getTime())) {
+        return res.status(400).json({ error: "invalid date format" });
+      }
+      
+      if (!transactionData.amount || isNaN(Number(transactionData.amount))) {
+        return res.status(400).json({ error: "invalid amount" });
+      }
+      
+      if (!transactionData.type || (transactionData.type !== 'income' && transactionData.type !== 'expense')) {
+        return res.status(400).json({ error: "invalid transaction type" });
+      }
+      
+      // Now try Zod validation
+      try {
+        const validatedData = insertTransactionSchema.parse(transactionData);
+        
+        // Check for duplicates by import hash if provided
+        if (validatedData.importHash) {
+          const existingTransaction = await storage.getTransactionByImportHash(validatedData.importHash);
+          if (existingTransaction) {
+            return res.status(409).json({ 
+              error: "Transaction with this import hash already exists",
+              existingTransaction
+            });
+          }
         }
+        
+        const transaction = await storage.createTransaction(validatedData);
+        res.status(201).json(transaction);
+      } catch (zodError) {
+        if (zodError instanceof z.ZodError) {
+          return res.status(400).json({ error: zodError.errors[0].message });
+        }
+        throw zodError; // re-throw other errors to be caught by the outer catch
       }
-      
-      const transaction = await storage.createTransaction(validatedData);
-      res.status(201).json(transaction);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ errors: error.errors });
-      } else {
-        console.error("Error creating transaction:", error);
-        res.status(500).json({ message: "Server error" });
-      }
+      console.error("Error creating transaction:", error);
+      res.status(500).json({ error: "Error creating transaction" });
     }
   });
 
@@ -734,7 +814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate all transactions in the batch
       const transactionDataArray = req.body.transactions || [];
       if (!Array.isArray(transactionDataArray)) {
-        return res.status(400).json({ message: "Expected transactions array" });
+        return res.status(400).json({ error: "Expected transactions array" });
       }
       
       // Add userId to each transaction and validate
@@ -743,6 +823,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const transaction of transactionDataArray) {
         try {
+          // Basic validation
+          if (!transaction.description) {
+            skippedTransactions.push({
+              transaction,
+              reason: "Validation error",
+              error: "description is required"
+            });
+            continue;
+          }
+          
+          if (!transaction.category) {
+            skippedTransactions.push({
+              transaction,
+              reason: "Validation error",
+              error: "category is required"
+            });
+            continue;
+          }
+          
+          if (!transaction.date || isNaN(new Date(transaction.date).getTime())) {
+            skippedTransactions.push({
+              transaction,
+              reason: "Validation error",
+              error: "invalid date format"
+            });
+            continue;
+          }
+          
+          if (!transaction.amount || isNaN(Number(transaction.amount))) {
+            skippedTransactions.push({
+              transaction,
+              reason: "Validation error",
+              error: "invalid amount"
+            });
+            continue;
+          }
+          
+          if (!transaction.type || (transaction.type !== 'income' && transaction.type !== 'expense')) {
+            skippedTransactions.push({
+              transaction,
+              reason: "Validation error",
+              error: "invalid transaction type"
+            });
+            continue;
+          }
+          
           const transactionWithUserId = { ...transaction, userId };
           const validatedData = insertTransactionSchema.parse(transactionWithUserId);
           
@@ -779,7 +905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If no valid transactions, return error
       if (validatedTransactions.length === 0) {
         return res.status(400).json({ 
-          message: "No valid transactions to process",
+          error: "No valid transactions to process",
           skipped: skippedTransactions
         });
       }
@@ -798,7 +924,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Error creating batch transactions:", error);
-      res.status(500).json({ message: "Server error" });
+      res.status(500).json({ error: "Error creating batch transactions" });
+    }
+  });
+
+  // CSV validation endpoint
+  app.post("/api/transactions/validate/csv", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Validate the CSV data format
+      const transactionDataArray = req.body.transactions || [];
+      if (!Array.isArray(transactionDataArray)) {
+        return res.status(400).json({ error: "Expected transactions array" });
+      }
+      
+      // Validate each transaction in the CSV data
+      const validationErrors = [];
+      
+      for (const transaction of transactionDataArray) {
+        if (!transaction.date) {
+          validationErrors.push("Date is required");
+        } else if (isNaN(new Date(transaction.date).getTime())) {
+          validationErrors.push("Invalid date format");
+        }
+        
+        if (!transaction.description) {
+          validationErrors.push("Description is required");
+        }
+        
+        if (!transaction.amount) {
+          validationErrors.push("Amount is required");
+        } else if (isNaN(Number(transaction.amount))) {
+          validationErrors.push("Invalid amount format");
+        }
+      }
+      
+      if (validationErrors.length > 0) {
+        return res.status(400).json({ 
+          error: `Invalid CSV data: ${validationErrors[0]}`,
+          validationErrors
+        });
+      }
+      
+      // If no validation errors, return success
+      res.status(200).json({ message: "CSV data is valid" });
+    } catch (error) {
+      console.error("Error validating CSV data:", error);
+      res.status(500).json({ error: "Error validating CSV data" });
+    }
+  });
+  
+  // CSV import endpoint
+  app.post("/api/transactions/import/csv", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Validate the CSV data format
+      const transactionDataArray = req.body.transactions || [];
+      if (!Array.isArray(transactionDataArray)) {
+        return res.status(400).json({ error: "Expected transactions array" });
+      }
+      
+      // Process each transaction in the CSV data
+      const validTransactions = [];
+      const skippedTransactions = [];
+      
+      for (const transaction of transactionDataArray) {
+        try {
+          // Basic validation
+          if (!transaction.date || isNaN(new Date(transaction.date).getTime())) {
+            skippedTransactions.push(transaction);
+            continue;
+          }
+          
+          if (!transaction.description) {
+            skippedTransactions.push(transaction);
+            continue;
+          }
+          
+          if (!transaction.amount || isNaN(Number(transaction.amount))) {
+            skippedTransactions.push(transaction);
+            continue;
+          }
+          
+          // Check for duplicates by import hash if provided
+          if (transaction.importHash) {
+            const existingTransaction = await storage.getTransactionByImportHash(transaction.importHash);
+            if (existingTransaction) {
+              skippedTransactions.push(transaction);
+              continue;
+            }
+          }
+          
+          // Prepare transaction for insertion
+          const transactionWithUserId = { 
+            ...transaction, 
+            userId,
+            type: parseFloat(transaction.amount) >= 0 ? 'income' : 'expense'
+          };
+          
+          validTransactions.push(transactionWithUserId);
+        } catch (error) {
+          skippedTransactions.push(transaction);
+        }
+      }
+      
+      // If no valid transactions, return with stats
+      if (validTransactions.length === 0) {
+        return res.status(200).json({ 
+          message: "No valid transactions to import",
+          imported: 0,
+          skipped: skippedTransactions.length
+        });
+      }
+      
+      // Import valid transactions
+      const importedTransactions = await storage.createManyTransactions(validTransactions);
+      
+      res.status(200).json({
+        imported: importedTransactions.length,
+        skipped: skippedTransactions.length,
+        transactions: importedTransactions
+      });
+    } catch (error) {
+      console.error("Error importing CSV data:", error);
+      res.status(500).json({ error: "Error importing CSV data" });
     }
   });
 
@@ -885,9 +1136,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const transactionId = parseInt(req.params.id, 10);
       
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ error: "Invalid transaction ID" });
+      }
+      
       const existingTransaction = await storage.getTransactionById(transactionId);
       if (!existingTransaction) {
-        return res.status(404).json({ message: "Transaction not found" });
+        return res.status(404).json({ error: "Transaction not found" });
       }
       
       // Check if user owns the transaction
@@ -895,19 +1150,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if user has edit access to this transaction via shared access
         const access = await hasAccessToUserData(userId, existingTransaction.userId);
         if (!access.hasAccess) {
-          return res.status(403).json({ message: "Not authorized" });
+          return res.status(403).json({ error: "Not authorized" });
         }
         
         if (access.accessLevel !== "edit") {
-          return res.status(403).json({ message: "You only have view access to this data" });
+          return res.status(403).json({ error: "You only have view access to this data" });
         }
       }
 
-      const updatedTransaction = await storage.updateTransaction(transactionId, req.body);
+      // Validate update data
+      const updateData = req.body;
+      
+      // Check date format if provided
+      if (updateData.date && isNaN(new Date(updateData.date).getTime())) {
+        return res.status(400).json({ error: "invalid date format" });
+      }
+      
+      // Check amount format if provided
+      if (updateData.amount !== undefined && isNaN(Number(updateData.amount))) {
+        return res.status(400).json({ error: "invalid amount" });
+      }
+      
+      // Check transaction type if provided
+      if (updateData.type && (updateData.type !== 'income' && updateData.type !== 'expense')) {
+        return res.status(400).json({ error: "invalid transaction type" });
+      }
+
+      const updatedTransaction = await storage.updateTransaction(transactionId, updateData);
       res.json(updatedTransaction);
     } catch (error) {
       console.error("Error updating transaction:", error);
-      res.status(500).json({ message: "Server error" });
+      res.status(500).json({ error: "Error updating transaction" });
+    }
+  });
+
+  app.patch("/api/transactions/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const transactionId = parseInt(req.params.id, 10);
+      
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ error: "Invalid transaction ID" });
+      }
+      
+      const existingTransaction = await storage.getTransactionById(transactionId);
+      if (!existingTransaction) {
+        return res.status(404).json({ error: "Transaction not found" });
+      }
+      
+      // Check if user owns the transaction
+      if (existingTransaction.userId !== userId) {
+        // Check if user has edit access to this transaction via shared access
+        const access = await hasAccessToUserData(userId, existingTransaction.userId);
+        if (!access.hasAccess) {
+          return res.status(403).json({ error: "Not authorized" });
+        }
+        
+        if (access.accessLevel !== "edit") {
+          return res.status(403).json({ error: "You only have view access to this data" });
+        }
+      }
+
+      // Validate update data
+      const updateData = req.body;
+      
+      // Check date format if provided
+      if (updateData.date && isNaN(new Date(updateData.date).getTime())) {
+        return res.status(400).json({ error: "invalid date format" });
+      }
+      
+      // Check amount format if provided
+      if (updateData.amount !== undefined && isNaN(Number(updateData.amount))) {
+        return res.status(400).json({ error: "invalid amount" });
+      }
+      
+      // Check transaction type if provided
+      if (updateData.type && (updateData.type !== 'income' && updateData.type !== 'expense')) {
+        return res.status(400).json({ error: "invalid transaction type" });
+      }
+
+      const updatedTransaction = await storage.updateTransaction(transactionId, updateData);
+      res.json(updatedTransaction);
+    } catch (error) {
+      console.error("Error updating transaction:", error);
+      res.status(500).json({ error: "Error updating transaction" });
     }
   });
 
@@ -916,21 +1242,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const transactionId = parseInt(req.params.id, 10);
       
+      if (isNaN(transactionId)) {
+        return res.status(400).json({ error: "Invalid transaction ID" });
+      }
+      
       const existingTransaction = await storage.getTransactionById(transactionId);
       if (!existingTransaction) {
-        return res.status(404).json({ message: "Transaction not found" });
+        return res.status(404).json({ error: "Transaction not found" });
       }
       
       // Only the transaction owner can delete it
       if (existingTransaction.userId !== userId) {
-        return res.status(403).json({ message: "Not authorized" });
+        return res.status(403).json({ error: "Not authorized" });
       }
 
       await storage.deleteTransaction(transactionId);
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting transaction:", error);
-      res.status(500).json({ message: "Server error" });
+      res.status(500).json({ error: "Error deleting transaction" });
     }
   });
 

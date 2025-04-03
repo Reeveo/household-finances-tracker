@@ -1,15 +1,16 @@
 import pg from 'pg';
-const { Pool } = pg;
 
-// Create PostgreSQL connection pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+const { Pool: PgPool } = pg;
+
+// Create a PostgreSQL pool for database connections
+const pool = new PgPool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:54322/postgres',
   ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false
-  } : undefined
+  } : false
 });
 
-// Test database connection
+// Test connection to the database
 const testConnection = async () => {
   try {
     const client = await pool.connect();
@@ -21,5 +22,17 @@ const testConnection = async () => {
     return false;
   }
 };
+
+// Ensure the database connection is closed gracefully on exit
+process.on('SIGINT', async () => {
+  try {
+    await pool.end();
+    console.log('Closed the PostgreSQL database connection.');
+    process.exit(0);
+  } catch (err) {
+    console.error('Error closing PostgreSQL connection:', err);
+    process.exit(1);
+  }
+});
 
 export { pool, testConnection };

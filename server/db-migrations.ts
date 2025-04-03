@@ -120,7 +120,6 @@ const createTables = async () => {
     `);
 
     // Create session table for connect-pg-simple
-    // This table is used to store session data
     await pool.query(`
       CREATE TABLE IF NOT EXISTS "session" (
         "sid" varchar NOT NULL COLLATE "default",

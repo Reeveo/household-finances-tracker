@@ -2,6 +2,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
 import session from "express-session";
+import connectPgSimple from 'connect-pg-simple';
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
@@ -29,13 +30,25 @@ export async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  // Use a simple in-memory session store for now
+  // Initialize PostgreSQL session store
+  const PgStore = connectPgSimple(session);
+  const sessionStore = new PgStore({
+    conString: process.env.DATABASE_URL, // Ensure this env var is set
+    tableName: 'user_sessions',         // Table name for sessions
+    createTableIfMissing: true          // Automatically create the table
+  });
+
+  // Configure session middleware
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "personal-finance-tracker-secret",
+    store: sessionStore,
+    secret: process.env.SESSION_SECRET as string, // Rely solely on the environment variable
     resave: false,
     saveUninitialized: false,
     cookie: {
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production (HTTPS)
+      httpOnly: true,                                // Prevent client-side JS access
+      maxAge: 1000 * 60 * 60 * 24 * 7,               // Session duration: 1 week
+      // sameSite: 'lax' // Consider adding SameSite attribute for CSRF protection
     }
   };
 
@@ -50,6 +63,8 @@ export function setupAuth(app: Express) {
       if (!user || !(await comparePasswords(password, user.password))) {
         return done(null, false);
       } else {
+        // DEBUG: Log the user object before passing to done
+        console.log("User object passed to done in LocalStrategy:", JSON.stringify(user, null, 2));
         return done(null, user);
       }
     }),

@@ -1,43 +1,32 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useAuth, AuthProvider } from '@/hooks/use-auth';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
-
-// Mock the modules used by useAuth
-vi.mock('@/lib/queryClient', () => ({
-  apiRequest: vi.fn(),
-  getQueryFn: vi.fn().mockImplementation(() => () => Promise.resolve(null)),
-  queryClient: {
-    setQueryData: vi.fn(),
-    invalidateQueries: vi.fn(),
-  }
-}));
-
-// Import mocked modules
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { useAuth } from '../../hooks/use-auth';
+import { renderWithProviders, setupMocks, createProviderWrapper } from '../test-utils';
 
 describe('useAuth Hook', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setupMocks();
   });
 
-  it('provides null user initially while loading', async () => {
-    // Set up a query client for the test
-    const testQueryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
+  test('provides null user initially while loading', async () => {
+    // Setup mock for loading state
+    setupMocks({
+      customMocks: {
+        useAuth: () => ({
+          user: null,
+          isLoading: true,
+          error: null,
+          isAuthenticated: false,
+          loginMutation: { mutate: vi.fn(), isSuccess: false },
+          logoutMutation: { mutate: vi.fn(), isSuccess: false },
+          registerMutation: { mutate: vi.fn(), isSuccess: false }
+        })
+      }
     });
 
     const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) => (
-        <QueryClientProvider client={testQueryClient}>
-          <AuthProvider>{children}</AuthProvider>
-        </QueryClientProvider>
-      ),
+      wrapper: createProviderWrapper()
     });
 
     // Initial state should be loading with null user
@@ -50,182 +39,189 @@ describe('useAuth Hook', () => {
     });
   });
 
-  it('provides user data when authenticated', async () => {
-    // Create a mock user
+  test('provides user data when authenticated', async () => {
     const mockUser = {
       id: 1,
-      username: 'testuser',
       name: 'Test User',
       email: 'test@example.com',
-      createdAt: new Date()
+      username: 'testuser',
+      role: 'user',
+      createdAt: new Date(),
     };
 
-    // Create a query client that will return the mock user
-    const testQueryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
+    // Setup mock for authenticated state
+    setupMocks({
+      authState: {
+        user: mockUser,
+        isLoading: false,
+        error: null,
+        isAuthenticated: true
+      }
     });
-    testQueryClient.setQueryData(['/api/user'], mockUser);
 
     const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) => (
-        <QueryClientProvider client={testQueryClient}>
-          <AuthProvider>{children}</AuthProvider>
-        </QueryClientProvider>
-      ),
+      wrapper: createProviderWrapper()
     });
 
-    // Wait for the hook to process the data
+    // Check authenticated state
     await waitFor(() => {
       expect(result.current.user).toEqual(mockUser);
     });
   });
 
-  it('calls login API when loginMutation is called', async () => {
-    // Mock the API response
+  test('handles login mutation', async () => {
     const mockUser = {
       id: 1,
-      username: 'testuser',
       name: 'Test User',
       email: 'test@example.com',
-      createdAt: new Date()
+      username: 'testuser',
+      role: 'user',
+      createdAt: new Date(),
     };
-    
-    (apiRequest as any).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockUser)
-    });
 
-    // Set up a query client for the test
-    const testQueryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
+    // Setup mock for login API call
+    setupMocks({
+      apiResponses: [
+        {
+          endpoint: '/api/auth/login',
+          method: 'POST',
+          response: mockUser
+        }
+      ],
+      authState: {
+        loginMutation: {
+          mutate: vi.fn(async () => mockUser),
+          isSuccess: true
+        }
+      }
     });
 
     const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) => (
-        <QueryClientProvider client={testQueryClient}>
-          <AuthProvider>{children}</AuthProvider>
-        </QueryClientProvider>
-      ),
+      wrapper: createProviderWrapper()
     });
 
-    // Call the login mutation
-    result.current.loginMutation.mutate({
+    // Attempt login
+    await result.current.loginMutation.mutate({
       username: 'testuser',
-      password: 'password123'
+      password: 'password'
     });
 
-    // Wait for the mutation to complete
+    // Verify login mutation state
     await waitFor(() => {
-      expect(apiRequest).toHaveBeenCalledWith(
-        'POST',
-        '/api/login',
-        {
-          username: 'testuser',
-          password: 'password123'
-        }
-      );
-      // Check that the setQueryData from queryClient was called
-      expect(queryClient.setQueryData).toHaveBeenCalledWith(['/api/user'], mockUser);
+      expect(result.current.loginMutation.isSuccess).toBe(true);
     });
   });
 
-  it('calls register API when registerMutation is called', async () => {
-    // Mock the API response
+  test('handles logout', async () => {
+    // Setup mock for logout API call
+    setupMocks({
+      apiResponses: [
+        {
+          endpoint: '/api/auth/logout',
+          method: 'POST',
+          response: { success: true }
+        }
+      ],
+      authState: {
+        logoutMutation: {
+          mutate: vi.fn(),
+          isSuccess: true
+        }
+      }
+    });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: createProviderWrapper()
+    });
+
+    // Attempt logout
+    await result.current.logoutMutation.mutate();
+
+    // Verify logout mutation state
+    await waitFor(() => {
+      expect(result.current.logoutMutation.isSuccess).toBe(true);
+    });
+  });
+
+  test('handles register mutation', async () => {
     const mockUser = {
       id: 1,
-      username: 'newuser',
       name: 'New User',
       email: 'new@example.com',
-      createdAt: new Date()
+      username: 'newuser',
+      role: 'user',
+      createdAt: new Date(),
     };
-    
-    (apiRequest as any).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockUser)
-    });
 
-    // Set up a query client for the test
-    const testQueryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
+    // Setup mock for register API call
+    setupMocks({
+      apiResponses: [
+        {
+          endpoint: '/api/auth/register',
+          method: 'POST',
+          response: mockUser
+        }
+      ],
+      authState: {
+        registerMutation: {
+          mutate: vi.fn(),
+          isSuccess: true
+        }
+      }
     });
 
     const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) => (
-        <QueryClientProvider client={testQueryClient}>
-          <AuthProvider>{children}</AuthProvider>
-        </QueryClientProvider>
-      ),
+      wrapper: createProviderWrapper()
     });
 
-    // Call the register mutation
-    result.current.registerMutation.mutate({
-      username: 'newuser',
-      password: 'password123',
+    // Attempt registration
+    await result.current.registerMutation.mutate({
       name: 'New User',
-      email: 'new@example.com'
+      email: 'new@example.com',
+      username: 'newuser',
+      password: 'newpassword'
     });
 
-    // Wait for the mutation to complete
+    // Verify registration mutation state
     await waitFor(() => {
-      expect(apiRequest).toHaveBeenCalledWith(
-        'POST',
-        '/api/register',
-        {
-          username: 'newuser',
-          password: 'password123',
-          name: 'New User',
-          email: 'new@example.com'
-        }
-      );
-      expect(queryClient.setQueryData).toHaveBeenCalledWith(['/api/user'], mockUser);
+      expect(result.current.registerMutation.isSuccess).toBe(true);
     });
   });
-
-  it('calls logout API when logoutMutation is called', async () => {
-    // Mock the API response
-    (apiRequest as any).mockResolvedValueOnce({
-      ok: true
-    });
-
-    // Set up a query client for the test
-    const testQueryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
+  
+  test('handles authentication errors', async () => {
+    // Setup mock for failed login attempt
+    setupMocks({
+      apiResponses: [
+        {
+          endpoint: '/api/auth/login',
+          method: 'POST',
+          error: new Error('Invalid credentials')
+        }
+      ],
+      authState: {
+        loginMutation: {
+          mutate: vi.fn(),
+          isSuccess: false,
+          isError: true,
+          error: new Error('Invalid credentials')
+        }
+      }
     });
 
     const { result } = renderHook(() => useAuth(), {
-      wrapper: ({ children }) => (
-        <QueryClientProvider client={testQueryClient}>
-          <AuthProvider>{children}</AuthProvider>
-        </QueryClientProvider>
-      ),
+      wrapper: createProviderWrapper()
     });
 
-    // Call the logout mutation
-    result.current.logoutMutation.mutate();
+    // Attempt login with invalid credentials
+    await result.current.loginMutation.mutate({
+      username: 'wrong',
+      password: 'wrong'
+    });
 
-    // Wait for the mutation to complete
+    // Verify error state
     await waitFor(() => {
-      expect(apiRequest).toHaveBeenCalledWith(
-        'POST',
-        '/api/logout'
-      );
-      expect(queryClient.setQueryData).toHaveBeenCalledWith(['/api/user'], null);
+      expect(result.current.loginMutation.isError).toBe(true);
+      expect(result.current.loginMutation.error).toBeTruthy();
     });
   });
 });

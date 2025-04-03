@@ -40,6 +40,12 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Check for SESSION_SECRET in production
+  if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+    console.error('FATAL ERROR: SESSION_SECRET environment variable is not set.');
+    process.exit(1); // Exit the process
+  }
+
   // Initialize database connection and create tables if needed
   const dbConnected = await testConnection();
   if (dbConnected) {
@@ -72,7 +78,7 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 3000
   // this serves both the API and the client
   const port = 3000;
-  app.listen(port, () => {
-    log(`serving on port ${port}`);
-  });
+  // app.listen removed for Vercel deployment
 })();
+
+export default app;

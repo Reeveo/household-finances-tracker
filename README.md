@@ -55,16 +55,22 @@ The Personal Finance Tracker is a full-stack web application designed to help us
 
 ### Backend
 - Node.js with Express
-- PostgreSQL database
+- PostgreSQL database via Supabase
 - Drizzle ORM with Zod validation
 - Passport.js for authentication
 - Session-based authentication
+
+### Testing
+- Vitest for unit and integration tests
+- Testing Library for component testing
+- Custom test utilities for consistent test environments
+- Standardized mock implementations for predictable testing
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js (v18+)
-- PostgreSQL database
+- Docker and Docker Compose (for local Supabase)
 
 ### Installation
 
@@ -79,24 +85,38 @@ cd personal-finance-tracker
 npm install
 ```
 
-3. Set up environment variables
-Create a `.env` file in the root directory with the following variables:
+3. Set up local Supabase instance
+```bash
+npx supabase start
 ```
-DATABASE_URL=postgresql://username:password@localhost:5432/finance_tracker
+
+This will start a local Supabase instance using Docker. The output will show the URLs and keys needed to connect to the database.
+
+4. Set up environment variables
+Create a `.env` file in the root directory with the following variables (use the values from the Supabase CLI output):
+```
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:<PORT>/postgres
+SUPABASE_URL=http://127.0.0.1:<PORT>
+SUPABASE_ANON_KEY=<ANON_KEY_FROM_OUTPUT>
 SESSION_SECRET=your_secret_key_here
 ```
 
-4. Set up the database
+5. Set up the database
 ```bash
 npm run db:push
 ```
 
-5. Start the development server
+6. Start the development server
 ```bash
 npm run dev
 ```
 
-6. Visit `http://localhost:5000` to use the application
+7. Visit `http://localhost:5000` to use the application
+
+8. When you're done, you can stop the local Supabase instance with:
+```bash
+npx supabase stop
+```
 
 ## 📊 Data Model
 
@@ -131,10 +151,22 @@ Run the test suite with:
 npm test
 ```
 
+Run specific tests with:
+```bash
+npm test -- path/to/test/file
+```
+
 The project includes:
 - Unit tests for utilities and components
 - Integration tests for API endpoints
 - End-to-end tests for critical user flows
+
+### Testing Utilities
+
+The project includes robust testing utilities:
+- `renderWithProviders`: A custom render function that provides all necessary context providers
+- `setupMocks`: A utility to configure test mocks consistently
+- Custom test helpers for common testing operations
 
 ## 📝 License
 
@@ -146,3 +178,17 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [TanStack Query](https://tanstack.com/query) for data fetching
 - [Drizzle ORM](https://orm.drizzle.team/) for database operations
 - [Recharts](https://recharts.org/) for data visualization
+- [Supabase](https://supabase.com/) for the database and authentication services
+
+## 🚧 Current Development Status
+
+The project is currently in active development with the following status:
+
+- ✅ Core transaction management functionality
+- ✅ User authentication and authorization
+- ✅ Basic dashboard and reporting
+- ✅ Financial calculators for mortgages and pensions
+- ✅ Data visualization components
+- 🔄 API documentation in progress
+- 🔄 Testing improvements ongoing
+- 🔄 Advanced features in development

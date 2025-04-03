@@ -5,3 +5,7 @@ server/public
 vite.config.ts.*
 *.tar.gz
 .env
+supabase/.temp
+supabase/.branches
+*.env.example
+cursor-rules.json
