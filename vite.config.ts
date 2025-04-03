@@ -36,4 +36,7 @@ export default defineConfig({
     outDir: 'client/dist',
     emptyOutDir: true // Good practice to clean output dir
   },
+  server: {
+    port: 3000,
+  },
 });
