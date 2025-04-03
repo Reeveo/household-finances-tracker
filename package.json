@@ -23,7 +23,7 @@
     "test:security": "npm audit",
     "db:migrate": "tsx server/db-migrations.ts",
     "db:migrate:test": "NODE_ENV=test tsx server/db-migrations.ts",
-    "build:client": "vite build client --outDir client/dist",
+    "build:client": "vite build --outDir client/dist",
     "vercel-build": "npm run build:client"
   },
   "dependencies": {
