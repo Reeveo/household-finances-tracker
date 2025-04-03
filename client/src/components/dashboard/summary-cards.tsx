@@ -28,12 +28,12 @@ type SummaryCardProps = {
   };
 };
 
-function SummaryCard({ 
-  title, 
-  amount, 
-  change, 
-  tooltip, 
-  actionLink, 
+export function SummaryCard({
+  title,
+  amount,
+  change,
+  tooltip,
+  actionLink,
   actionText,
   progress,
   alert

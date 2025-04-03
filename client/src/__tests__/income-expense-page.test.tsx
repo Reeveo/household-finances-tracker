@@ -17,6 +17,13 @@ vi.mock('@tanstack/react-query', () => ({
   useQueryClient: vi.fn(() => ({
     invalidateQueries: vi.fn(),
   })),
+  // Add mock for QueryClient class
+  QueryClient: class {
+    invalidateQueries = vi.fn();
+    getQueryData = vi.fn();
+    setQueryData = vi.fn();
+    // Add other methods if needed by the code under test
+  },
 }));
 
 // Mock components used in the page
