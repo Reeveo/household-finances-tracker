@@ -49,21 +49,6 @@ jobs:
       env:
         NODE_ENV: production
 
-    - name: Setup Sentry CLI
-      uses: getsentry/action-setup-cli@v1.2.0
-      with:
-        version: latest
-      env:
-        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-
-    - name: Upload source maps to Sentry
-      run: npm run sentry:sourcemaps
-      env:
-        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
     - name: Deploy to staging
       run: |
@@ -113,21 +98,6 @@ jobs:
       env:
         NODE_ENV: production
 
-    - name: Setup Sentry CLI
-      uses: getsentry/action-setup-cli@v1.2.0
-      with:
-        version: latest
-      env:
-        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-
-    - name: Upload source maps to Sentry
-      run: npm run sentry:sourcemaps
-      env:
-        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-        SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
     - name: Run database migrations
       run: npm run db:migrate
