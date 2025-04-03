@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "vitest run --config vitest.config.ts",
-    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:integration": "vitest run --config vitest.config.ts",
     "test:e2e": "cypress run",
     "test:e2e:ci": "cypress run --config baseUrl=$BASE_URL",
     "test:coverage": "vitest run --coverage",

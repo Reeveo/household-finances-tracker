@@ -133,7 +133,7 @@ describe("TransactionForm", () => {
     expect(screen.getByLabelText(/^merchant$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^date$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^amount$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^category$/i)).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: /category/i })).toBeInTheDocument(); // Use getByRole due to mock structure
     expect(screen.getByLabelText(/^subcategory$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^payment method$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^notes$/i)).toBeInTheDocument();

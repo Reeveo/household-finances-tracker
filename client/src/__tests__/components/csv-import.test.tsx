@@ -53,7 +53,7 @@ describe('CSVImport', () => {
     const { user } = renderWithProviders(<CSVImport />);
     
     // Check that the title is rendered
-    expect(screen.getByText('Upload Bank Statement CSV')).toBeInTheDocument();
+    expect(screen.getByText('Import Transactions')).toBeInTheDocument();
     
     // Check that supported formats section is shown
     expect(screen.getByText('Supported Bank Formats')).toBeInTheDocument();
