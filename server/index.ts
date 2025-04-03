@@ -78,7 +78,7 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 3000
   // this serves both the API and the client
   const port = 3000;
-  app.listen(port, () => {
-    log(`serving on port ${port}`);
-  });
+  // app.listen removed for Vercel deployment
 })();
+
+export default app;
