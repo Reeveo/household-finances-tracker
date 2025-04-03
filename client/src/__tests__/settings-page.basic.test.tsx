@@ -34,7 +34,8 @@ describe('SettingsPage', () => {
     const { user } = renderWithProviders(<SettingsPage />);
     
     // Check for the main heading (using getByText as role might have changed)
-    expect(screen.getByText('Settings')).toBeInTheDocument();
+    // Check for the main heading (using getByRole with regex for robustness)
+    expect(await screen.findByRole('heading', { name: /settings/i })).toBeInTheDocument();
     
     // Check that tabs are present
     expect(screen.getByRole('tab', { name: /profile/i })).toBeInTheDocument();

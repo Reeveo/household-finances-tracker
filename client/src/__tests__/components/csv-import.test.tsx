@@ -53,7 +53,7 @@ describe('CSVImport', () => {
     const { user } = renderWithProviders(<CSVImport />);
     
     // Check that the title is rendered
-    expect(screen.getByText('Import Transactions')).toBeInTheDocument();
+    expect(await screen.findByText(/import transactions/i)).toBeInTheDocument();
     
     // Check that supported formats section is shown
     expect(screen.getByText('Supported Bank Formats')).toBeInTheDocument();
@@ -67,14 +67,14 @@ describe('CSVImport', () => {
     });
     
     // Upload button should be present
-    expect(screen.getByRole('button', { name: /select csv file/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /select csv file/i })).toBeInTheDocument();
   });
   
   it('handles file selection', async () => {
     const { user } = renderWithProviders(<CSVImport />);
     
     // Get file input and upload button
-    const uploadButton = screen.getByRole('button', { name: /select csv file/i });
+    const uploadButton = await screen.findByRole('button', { name: /select csv file/i });
     
     // Create a test file
     const testFile = new File(['date,description,amount\n2023-01-01,Test Transaction,100.00'], 'test.csv', { type: 'text/csv' });
@@ -101,7 +101,7 @@ describe('CSVImport', () => {
     const { user } = renderWithProviders(<CSVImport />);
     
     // Get file input and upload button
-    const uploadButton = screen.getByRole('button', { name: /select csv file/i });
+    const uploadButton = await screen.findByRole('button', { name: /select csv file/i });
     
     // Create a test file with wrong type
     const testFile = new File(['not a csv'], 'test.txt', { type: 'text/plain' });
