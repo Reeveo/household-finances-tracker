@@ -25,4 +25,15 @@ export default defineConfig({
       '@shared': fileURLToPath(new URL('./shared', import.meta.url))
     },
   },
+  build: {
+    rollupOptions: {
+      input: {
+        // Define the entry point relative to the project root
+        main: fileURLToPath(new URL('./client/index.html', import.meta.url))
+      }
+    },
+    // Keep outDir definition consistent with the build script
+    outDir: 'client/dist',
+    emptyOutDir: true // Good practice to clean output dir
+  },
 });
