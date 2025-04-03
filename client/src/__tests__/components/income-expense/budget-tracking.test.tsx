@@ -38,13 +38,10 @@ vi.mock('@/components/ui/select', () => ({
 }));
 
 vi.mock('@/components/ui/progress', () => ({
-  Progress: ({ value, max, className, indicatorClassName }: any) => (
-    <div 
-      data-testid="progress" 
-      data-value={value} 
-      data-max={max} 
-      className={className}
-      data-indicator-class={indicatorClassName}
+  Progress: ({ indicatorClassName, ...rest }: any) => ( // Destructure indicatorClassName
+    <div
+      data-testid="progress"
+      {...rest} // Spread remaining props (value, max, className)
     ></div>
   ),
 }));
