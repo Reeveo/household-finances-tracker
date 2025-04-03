@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import IncomeExpensePage from '../pages/income-expense-page';
 import { useAuth } from '@/hooks/use-auth';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { renderWithProviders } from './test-utils';
 
 // Mock the hooks
@@ -278,7 +278,7 @@ describe('IncomeExpensePage', () => {
 
   it('handles filtering transactions', async () => {
     const mockUseQuery = vi.fn();
-    (useQuery as any).mockImplementation((key, options) => {
+    (useQuery as any).mockImplementation((key: any, options: any) => {
       mockUseQuery(key, options);
       return {
         data: mockTransactions,
@@ -305,26 +305,9 @@ describe('IncomeExpensePage', () => {
   });
 
   it('handles CSV import', async () => {
-    const mockInvalidateQueries = vi.fn();
-    const mockQueryClient = {
-      invalidateQueries: mockInvalidateQueries
-    };
-    
-    vi.mock('@tanstack/react-query', () => ({
-      useQuery: vi.fn().mockReturnValue({
-        data: mockTransactions,
-        isLoading: false,
-        isError: false,
-        error: null,
-      }),
-      useMutation: vi.fn().mockReturnValue({
-        mutate: vi.fn(),
-        isPending: false,
-        isError: false,
-        error: null,
-      }),
-      useQueryClient: vi.fn(() => mockQueryClient),
-    }));
+    // Get the mock invalidateQueries function from the globally mocked useQueryClient
+    const queryClient = (useQueryClient as any)();
+    const mockInvalidateQueries = queryClient.invalidateQueries;
     
     render(<IncomeExpensePage />);
     

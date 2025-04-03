@@ -1,11 +1,33 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'; // Import fireEvent
+import { vi, vi as vitest } from 'vitest'; // Use alias for hoisted
 import DashboardPage from '../pages/dashboard-page';
 import { useAuth } from '@/hooks/use-auth';
 import { useQuery } from '@tanstack/react-query';
 import { renderWithProviders } from './test-utils';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest'; // Import beforeEach
+
+// Hoist the mockNavigate function *before* the wouter mock that uses it
+const mockNavigate = vitest.hoisted(() => vitest.fn());
+
+// Mock wouter using importOriginal, explicitly providing Link if needed
+vi.mock('wouter', async (importOriginal) => {
+  const actual = await importOriginal() as any; // Cast to any to handle potential type issues
+  return {
+    ...actual, // Spread original exports
+    // Explicitly provide Link mock ONLY if it's not in actual, otherwise use original
+    Link: actual?.Link || (({ children, ...props }: { children: React.ReactNode, [key: string]: any }) => <a {...props}>{children}</a>),
+    // Override specific hooks
+    useLocation: () => ['/dashboard'],
+    useNavigate: () => mockNavigate,
+  };
+});
+
+// Hoist mockApiRequest *before* the queryClient mock that uses it
+const mockApiRequest = vitest.hoisted(() => vitest.fn());
+vi.mock('@/lib/queryClient', () => ({
+  apiRequest: mockApiRequest,
+}));
 
 // Mock the hooks
 vi.mock('@/hooks/use-auth', () => ({
@@ -47,6 +69,8 @@ vi.mock('@/components/layout/header', () => ({
   Header: () => <div data-testid="header">Header</div>,
 }));
 
+// Duplicated hoisted variables and mocks removed. The correct versions are at the top (lines 10-28).
+
 // Create a simplified rendering function that doesn't rely on providers
 const renderWithoutProviders = (ui: React.ReactElement) => {
   return render(ui);
@@ -56,7 +80,7 @@ describe('DashboardPage', () => {
   const mockUser = { 
     id: 1, 
     name: 'Test User', 
-    email: 'test@example.com' 
+    email: 'test@example.com'
   };
 
   beforeEach(() => {
@@ -139,12 +163,7 @@ describe('DashboardPage', () => {
       isAuthenticated: false
     });
     
-    // Mock navigate function to test redirection
-    const mockNavigate = vi.fn();
-    vi.mock('wouter', () => ({
-      useLocation: () => ['/dashboard'],
-      useNavigate: () => mockNavigate,
-    }));
+    // mockNavigate is now defined and hoisted above
 
     render(<DashboardPage />);
     
@@ -157,7 +176,7 @@ describe('DashboardPage', () => {
   it('fetches data with the correct parameters', async () => {
     // Create a mock for the useQuery hook that captures the query key
     let capturedQueryKey: any;
-    (useQuery as any).mockImplementation((queryKey, options) => {
+    (useQuery as any).mockImplementation((queryKey: any, options: any) => { // Add explicit types
       capturedQueryKey = queryKey;
       return {
         data: {
@@ -185,7 +204,7 @@ describe('DashboardPage', () => {
   it('uses the default time period for data fetching', async () => {
     // Create a mock for the useQuery hook that captures the fetchFn
     let capturedFetchFn: any;
-    (useQuery as any).mockImplementation((queryKey, options) => {
+    (useQuery as any).mockImplementation((queryKey: any, options: any) => { // Add explicit types
       capturedFetchFn = options.queryFn;
       return {
         data: null,
@@ -195,11 +214,7 @@ describe('DashboardPage', () => {
       };
     });
 
-    // Mock apiRequest function
-    const mockApiRequest = vi.fn();
-    vi.mock('@/lib/queryClient', () => ({
-      apiRequest: mockApiRequest,
-    }));
+    // mockApiRequest and the mock for queryClient are now defined at the top level
 
     render(<DashboardPage />);
     
